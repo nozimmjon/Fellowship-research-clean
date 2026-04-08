@@ -1,0 +1,2 @@
+sample_label,sample_n,cell_n,cell_min_n,cell_p25_n,cell_median_n,cell_p75_n,cell_max_n,cell_share_ge_5,cell_share_ge_10,cell_share_ge_20
+no_migration_signal,4114,84,5.0,27.75,48.5,67.25,115.0,1.0,0.9523809523809523,0.8809523809523809

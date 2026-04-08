@@ -1,0 +1,22 @@
+project:
+  type: default
+  output-dir: outputs/rendered
+
+bibliography: references.bib
+link-citations: true
+reference-section-title: References
+
+execute:
+  echo: false
+  warning: false
+  message: false
+
+format:
+  html:
+    toc: true
+    number-sections: true
+    theme: cosmo
+  docx:
+    toc: true
+
+editor: visual

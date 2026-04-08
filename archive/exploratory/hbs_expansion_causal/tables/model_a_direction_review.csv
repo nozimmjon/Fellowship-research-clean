@@ -1,0 +1,17 @@
+review_group,exposure_bin,sample_n,weighted_mean
+overall,1,1028.0,0.007809103127853671
+overall,2,1029.0,0.0023855973743746265
+overall,3,1028.0,0.009131455282468105
+overall,4,1029.0,0.01733194741551183
+lower_parent_education,1,335.0,0.003027955277643052
+lower_parent_education,2,336.0,0.0
+lower_parent_education,3,335.0,0.002273746127937828
+lower_parent_education,4,336.0,0.009705844614048888
+higher_parent_education,1,693.0,0.009975712091801436
+higher_parent_education,2,693.0,0.0036793035613977973
+higher_parent_education,3,693.0,0.013936600826295113
+higher_parent_education,4,693.0,0.019858056628897967
+full_overlap_only,1,374.0,0.017773417089793908
+full_overlap_only,2,375.0,0.0
+full_overlap_only,3,375.0,0.013900384442554961
+full_overlap_only,4,375.0,0.03506551238540616

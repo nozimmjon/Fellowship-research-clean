@@ -1,0 +1,25 @@
+cohort_exposure_group,exposure_bin,low_parent_education,sample_n,weighted_mean,preferred_window,preferred_outcome
+full_overlap_4,1,0,252,0.02656533077490312,18_24,tertiary enrollment
+full_overlap_4,1,1,114,0,18_24,tertiary enrollment
+full_overlap_4,2,0,187,0,18_24,tertiary enrollment
+full_overlap_4,2,1,106,0,18_24,tertiary enrollment
+full_overlap_4,3,0,302,0.016054209260510762,18_24,tertiary enrollment
+full_overlap_4,3,1,200,0.0038250426271205042,18_24,tertiary enrollment
+full_overlap_4,4,0,248,0.037774388704805234,18_24,tertiary enrollment
+full_overlap_4,4,1,90,0.038244210047335234,18_24,tertiary enrollment
+partial_overlap_1_2,1,0,262,0,18_24,tertiary enrollment
+partial_overlap_1_2,1,1,210,0,18_24,tertiary enrollment
+partial_overlap_1_2,2,0,276,0,18_24,tertiary enrollment
+partial_overlap_1_2,2,1,93,0,18_24,tertiary enrollment
+partial_overlap_1_2,3,0,188,0,18_24,tertiary enrollment
+partial_overlap_1_2,3,1,79,0,18_24,tertiary enrollment
+partial_overlap_1_2,4,0,315,0.011396171997444788,18_24,tertiary enrollment
+partial_overlap_1_2,4,1,101,0,18_24,tertiary enrollment
+partial_overlap_3,1,0,127,0,18_24,tertiary enrollment
+partial_overlap_3,1,1,64,0.014398424417829039,18_24,tertiary enrollment
+partial_overlap_3,2,0,249,0.009872620418058599,18_24,tertiary enrollment
+partial_overlap_3,2,1,118,0,18_24,tertiary enrollment
+partial_overlap_3,3,0,178,0.021888488034397555,18_24,tertiary enrollment
+partial_overlap_3,3,1,81,0,18_24,tertiary enrollment
+partial_overlap_3,4,0,188,0.010014647780540705,18_24,tertiary enrollment
+partial_overlap_3,4,1,86,0,18_24,tertiary enrollment

@@ -1,0 +1,4 @@
+model,formula
+Model A,tertiary_enrolled_proxy by cohort_exposure_group x exposure quartile x low_parent_education
+Model B,deferred
+Model C,deferred

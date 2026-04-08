@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:claesbackman.substack.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(curl:*)"
+    ]
+  }
+}
