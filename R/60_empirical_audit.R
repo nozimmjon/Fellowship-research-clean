@@ -659,19 +659,343 @@ build_parent_measure_map <- function() {
   )
 }
 
-build_rank_rank_change_tests <- function(module_a_metrics) {
+extract_overall_module_a_metric <- function(module_a_metrics, metric_name) {
   core_metrics <- module_a_metrics$core_metrics
   if (is.null(core_metrics) || nrow(core_metrics) == 0) {
     return(tibble::tibble())
   }
 
-  slopes <- core_metrics %>%
+  core_metrics %>%
     dplyr::filter(
       subgroup_type == "overall",
       subgroup_value == "all",
-      metric == "rank_rank_slope",
+      metric == metric_name,
       status == "ok"
+    )
+}
+
+build_common_region_support <- function(lits_harmonized, target_waves = c(2010L, 2016L, 2022L)) {
+  dat <- prepare_mobility_data(lits_harmonized)
+  if (nrow(dat) == 0 || !("region" %in% names(dat))) {
+    return(list(
+      common_regions = character(),
+      region_support = tibble::tibble(),
+      support_counts = tibble::tibble()
+    ))
+  }
+
+  region_support <- dat %>%
+    dplyr::filter(
+      wave_year %in% target_waves,
+      !is.na(region),
+      region != ""
     ) %>%
+    dplyr::group_by(wave_year, region) %>%
+    dplyr::summarise(
+      n_total = dplyr::n(),
+      rank_valid_n = sum(!is.na(own_years_schooling) & !is.na(parent_years_schooling) & !is.na(sample_weight) & sample_weight > 0),
+      transition_valid_n = sum(!is.na(own_ed_level) & !is.na(parent_ed_level) & !is.na(sample_weight) & sample_weight > 0),
+      .groups = "drop"
+    ) %>%
+    dplyr::arrange(wave_year, region)
+
+  common_regions <- region_support %>%
+    dplyr::filter(rank_valid_n > 0) %>%
+    dplyr::group_by(region) %>%
+    dplyr::summarise(
+      n_supported_waves = dplyr::n_distinct(wave_year),
+      .groups = "drop"
+    ) %>%
+    dplyr::filter(n_supported_waves == length(target_waves)) %>%
+    dplyr::pull(region)
+
+  region_support <- region_support %>%
+    dplyr::mutate(in_common_region = region %in% common_regions)
+
+  support_counts <- dplyr::bind_rows(
+    region_support %>%
+      dplyr::group_by(wave_year) %>%
+      dplyr::summarise(
+        sample_support = "full_sample",
+        region_count = sum(rank_valid_n > 0),
+        rank_valid_n = sum(rank_valid_n),
+        transition_valid_n = sum(transition_valid_n),
+        .groups = "drop"
+      ),
+    region_support %>%
+      dplyr::filter(in_common_region) %>%
+      dplyr::group_by(wave_year) %>%
+      dplyr::summarise(
+        sample_support = "common_region_only",
+        region_count = sum(rank_valid_n > 0),
+        rank_valid_n = sum(rank_valid_n),
+        transition_valid_n = sum(transition_valid_n),
+        .groups = "drop"
+      )
+  ) %>%
+    dplyr::mutate(
+      sample_support_label = dplyr::case_when(
+        sample_support == "full_sample" ~ "Full sample",
+        sample_support == "common_region_only" ~ "Common-region support only",
+        TRUE ~ sample_support
+      )
+    ) %>%
+    dplyr::arrange(sample_support, wave_year)
+
+  list(
+    common_regions = common_regions,
+    region_support = region_support,
+    support_counts = support_counts
+  )
+}
+
+build_common_region_sensitivity <- function(lits_harmonized, module_a_metrics, target_waves = c(2010L, 2016L, 2022L)) {
+  support_info <- build_common_region_support(lits_harmonized, target_waves = target_waves)
+
+  full_slopes <- extract_overall_module_a_metric(module_a_metrics, "rank_rank_slope") %>%
+    dplyr::transmute(
+      sample_support = "full_sample",
+      sample_support_label = "Full sample",
+      wave_year,
+      estimate,
+      std.error,
+      ci_low,
+      ci_high,
+      effective_n,
+      n,
+      status
+    )
+
+  full_transitions <- module_a_metrics$transition_matrix
+  if (is.null(full_transitions)) {
+    full_transitions <- tibble::tibble()
+  }
+  full_transitions <- full_transitions %>%
+    dplyr::mutate(
+      sample_support = "full_sample",
+      sample_support_label = "Full sample",
+      .before = 1
+    )
+
+  if (length(support_info$common_regions) == 0) {
+    return(list(
+      slopes = tibble::tibble(),
+      change_tests = tibble::tibble(),
+      transitions = tibble::tibble(),
+      support = support_info$region_support,
+      support_counts = support_info$support_counts
+    ))
+  }
+
+  common_data <- lits_harmonized %>%
+    dplyr::filter(region %in% support_info$common_regions)
+  common_metrics <- estimate_mobility_metrics(common_data)
+
+  common_slopes <- extract_overall_module_a_metric(common_metrics, "rank_rank_slope") %>%
+    dplyr::transmute(
+      sample_support = "common_region_only",
+      sample_support_label = "Common-region support only",
+      wave_year,
+      estimate,
+      std.error,
+      ci_low,
+      ci_high,
+      effective_n,
+      n,
+      status
+    )
+
+  common_transitions <- common_metrics$transition_matrix
+  if (is.null(common_transitions)) {
+    common_transitions <- tibble::tibble()
+  }
+  common_transitions <- common_transitions %>%
+    dplyr::mutate(
+      sample_support = "common_region_only",
+      sample_support_label = "Common-region support only",
+      .before = 1
+    )
+
+  slope_comparison <- dplyr::bind_rows(full_slopes, common_slopes) %>%
+    dplyr::left_join(
+      support_info$support_counts %>%
+        dplyr::select(sample_support, wave_year, region_count, rank_valid_n),
+      by = c("sample_support", "wave_year")
+    ) %>%
+    dplyr::rename(valid_rank_sample_n = rank_valid_n) %>%
+    dplyr::arrange(wave_year, sample_support)
+
+  change_tests <- dplyr::bind_rows(
+    build_rank_change_tests_from_slopes(
+      full_slopes %>% dplyr::select(wave_year, estimate, std.error, n, effective_n)
+    ) %>%
+      dplyr::mutate(
+        sample_support = "full_sample",
+        sample_support_label = "Full sample",
+        .before = 1
+      ),
+    build_rank_change_tests_from_slopes(
+      common_slopes %>% dplyr::select(wave_year, estimate, std.error, n, effective_n)
+    ) %>%
+      dplyr::mutate(
+        sample_support = "common_region_only",
+        sample_support_label = "Common-region support only",
+        .before = 1
+      )
+  ) %>%
+    dplyr::arrange(sample_support, comparison)
+
+  transition_comparison <- dplyr::bind_rows(full_transitions, common_transitions) %>%
+    dplyr::left_join(
+      support_info$support_counts %>%
+        dplyr::select(sample_support, wave_year, region_count, transition_valid_n),
+      by = c("sample_support", "wave_year")
+    ) %>%
+    dplyr::rename(valid_transition_sample_n = transition_valid_n) %>%
+    dplyr::arrange(sample_support, wave_year, parent_ed_level, own_ed_level)
+
+  list(
+    slopes = slope_comparison,
+    change_tests = change_tests,
+    transitions = transition_comparison,
+    support = support_info$region_support,
+    support_counts = support_info$support_counts
+  )
+}
+
+weight_percentile_summary <- function(weights) {
+  weights <- suppressWarnings(as.numeric(weights))
+  weights <- weights[!is.na(weights) & weights > 0]
+  if (length(weights) == 0) {
+    return(tibble::tibble(
+      n_non_missing = 0L,
+      mean = NA_real_,
+      min = NA_real_,
+      p1 = NA_real_,
+      p5 = NA_real_,
+      p25 = NA_real_,
+      p50 = NA_real_,
+      p75 = NA_real_,
+      p95 = NA_real_,
+      p99 = NA_real_,
+      max = NA_real_
+    ))
+  }
+
+  quants <- stats::quantile(weights, probs = c(0.01, 0.05, 0.25, 0.50, 0.75, 0.95, 0.99), na.rm = TRUE, names = FALSE)
+  tibble::tibble(
+    n_non_missing = length(weights),
+    mean = mean(weights),
+    min = min(weights),
+    p1 = quants[[1]],
+    p5 = quants[[2]],
+    p25 = quants[[3]],
+    p50 = quants[[4]],
+    p75 = quants[[5]],
+    p95 = quants[[6]],
+    p99 = quants[[7]],
+    max = max(weights)
+  )
+}
+
+summarise_weight_distribution <- function(df, weight_var, sample_family, sample_label, wave_var = "wave_year") {
+  if (is.null(df) || nrow(df) == 0 || !(weight_var %in% names(df))) {
+    return(tibble::tibble())
+  }
+
+  dat <- df %>%
+    dplyr::mutate(weight_value = suppressWarnings(as.numeric(.data[[weight_var]]))) %>%
+    dplyr::filter(!is.na(weight_value), weight_value > 0)
+
+  if (nrow(dat) == 0) {
+    return(tibble::tibble())
+  }
+
+  if (!(wave_var %in% names(dat))) {
+    dat$wave_year <- NA_integer_
+  } else {
+    dat$wave_year <- suppressWarnings(as.integer(dat[[wave_var]]))
+  }
+
+  dat %>%
+    dplyr::group_by(wave_year) %>%
+    dplyr::group_modify(~ weight_percentile_summary(.x$weight_value)) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(
+      sample_family = sample_family,
+      sample_label = sample_label,
+      weight_variable = weight_var,
+      .before = 1
+    ) %>%
+    dplyr::arrange(sample_family, wave_year)
+}
+
+build_weight_diagnostics <- function(lits_harmonized, module_c_model) {
+  rows <- list()
+
+  adult_dat <- prepare_mobility_data(lits_harmonized)
+  if (nrow(adult_dat) > 0) {
+    rows[[length(rows) + 1]] <- summarise_weight_distribution(
+      adult_dat,
+      weight_var = "sample_weight",
+      sample_family = "adult_lits",
+      sample_label = "LiTS analytical sample"
+    )
+  }
+
+  module_b_dat <- prepare_module_b_data(lits_harmonized)
+  if (nrow(module_b_dat) > 0) {
+    rows[[length(rows) + 1]] <- summarise_weight_distribution(
+      module_b_dat,
+      weight_var = "sample_weight",
+      sample_family = "module_b",
+      sample_label = "Module B estimation sample"
+    )
+  }
+
+  module_c_dat <- module_c_model$analysis_data
+  if (!is.null(module_c_dat) && nrow(module_c_dat) > 0) {
+    if (!("wave_year" %in% names(module_c_dat))) {
+      module_c_dat$wave_year <- 2022L
+    }
+    rows[[length(rows) + 1]] <- summarise_weight_distribution(
+      module_c_dat,
+      weight_var = "weight_final",
+      sample_family = "module_c",
+      sample_label = "Module C mechanism sample"
+    )
+  }
+
+  if (length(rows) == 0) {
+    return(tibble::tibble())
+  }
+
+  dplyr::bind_rows(rows) %>%
+    dplyr::arrange(sample_family, wave_year)
+}
+
+build_analysis_threshold_registry <- function() {
+  tibble::tribble(
+    ~module, ~threshold_id, ~threshold_value, ~threshold_unit, ~applies_to, ~rationale,
+    "Module A", "analytic_age_range", "25-64", "years", "Age-restricted LiTS analytical sample", "Keeps the adult sample in a range where own education is largely complete.",
+    "Module A", "minimum_descriptive_cell_n", "30", "observations", "National, subgroup, and transition outputs", "Suppresses sparse descriptive cells and unstable subgroup estimates.",
+    "Module B", "minimum_model_n", "100", "observations", "Pooled fixed-effects models", "Prevents pooled regressions from being fit on undersized combined samples.",
+    "Module B", "minimum_pooled_non_missing_share", "0.20", "share", "Candidate extended controls", "Requires broad pooled support before an optional household control can enter the extended specification.",
+    "Module B", "minimum_wave_non_missing_share", "0.10", "share", "Candidate extended controls in each wave", "Prevents a control from entering when support collapses in one wave.",
+    "Module B", "minimum_unique_values", "2", "distinct values", "Candidate extended controls", "Requires observed variation before a control can be used in the extended specification.",
+    "Module C", "minimum_model_n", "80", "observations", "Appendix region-fixed-effects logits", "Avoids logit estimation on very small complete-case samples.",
+    "Module C", "minimum_group_n", as.character(MODULE_C_MIN_GROUP_N), "observations", "Low-vs-high parental-education split", "Requires at least minimal support in each parental-education group.",
+    "Module C", "minimum_events_per_group", as.character(MODULE_C_MIN_EVENTS_PER_GROUP), "events and non-events", "Low-vs-high parental-education split", "Requires at least two events and two non-events in each group for each outcome."
+  )
+}
+
+build_rank_rank_change_tests <- function(module_a_metrics) {
+  slopes <- extract_overall_module_a_metric(module_a_metrics, "rank_rank_slope")
+  if (nrow(slopes) == 0) {
+    return(tibble::tibble())
+  }
+
+  slopes <- slopes %>%
     dplyr::select(wave_year, estimate, std.error, n, effective_n)
 
   build_rank_change_tests_from_slopes(slopes)
@@ -727,13 +1051,7 @@ build_subgroup_trend_checks <- function(module_a_metrics) {
 }
 
 build_trend_comparison <- function(module_a_metrics, module_b_models) {
-  raw_slopes <- module_a_metrics$core_metrics %>%
-    dplyr::filter(
-      subgroup_type == "overall",
-      subgroup_value == "all",
-      metric == "rank_rank_slope",
-      status == "ok"
-    ) %>%
+  raw_slopes <- extract_overall_module_a_metric(module_a_metrics, "rank_rank_slope") %>%
     dplyr::transmute(
       evidence_family = "module_a_raw_descriptive",
       specification = "descriptive",
@@ -1086,6 +1404,9 @@ build_empirical_audit <- function(lits_harmonized, module_a_metrics, module_b_mo
   sample_flow <- build_empirical_sample_flow(master_flags, module_c_flags)
   inclusion_composition <- build_inclusion_composition(master_flags)
   parent_availability <- build_parent_availability(master_flags)
+  common_region_sensitivity <- build_common_region_sensitivity(lits_harmonized, module_a_metrics)
+  weight_diagnostics <- build_weight_diagnostics(lits_harmonized, module_c_model)
+  analysis_thresholds <- build_analysis_threshold_registry()
   parent_measure_robustness <- build_parent_measure_robustness(lits_harmonized)
   parent_harmonization_audit <- build_parent_harmonization_audit(lits_harmonized)
   parent_missingness_by_wave <- build_parent_missingness_by_wave(lits_harmonized)
@@ -1104,6 +1425,13 @@ build_empirical_audit <- function(lits_harmonized, module_a_metrics, module_b_mo
     sample_flow = sample_flow,
     inclusion_composition = inclusion_composition,
     parent_availability = parent_availability,
+    common_region_rank_rank = common_region_sensitivity$slopes,
+    common_region_rank_rank_change_tests = common_region_sensitivity$change_tests,
+    common_region_transition_comparison = common_region_sensitivity$transitions,
+    common_region_support = common_region_sensitivity$support,
+    common_region_support_counts = common_region_sensitivity$support_counts,
+    weight_diagnostics = weight_diagnostics,
+    analysis_thresholds = analysis_thresholds,
     parent_measure_robustness = parent_measure_robustness,
     parent_harmonization_robustness = parent_harmonization_audit$robustness,
     parent_harmonization_change_tests = parent_harmonization_audit$change_tests,

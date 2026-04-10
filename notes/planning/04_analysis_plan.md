@@ -63,7 +63,11 @@ Subgroup splits:
 
 ## 7) Estimation Rules
 - Weighted estimates by default.
-- Robust SEs clustered at PSU if available; otherwise at region.
+- Descriptive subgroup and transition outputs suppressed when valid `N < 30`.
+- Pooled Module B regressions cluster at region because the locked harmonized analysis file does not retain a cross-wave PSU identifier.
+- Eq. 2 wave-difference inference is reported with both conventional region-clustered p-values and a Webb wild-cluster-bootstrap sensitivity.
+- Candidate extended Module B controls must be non-missing for at least 20 percent of the pooled sample, non-missing for at least 10 percent of observations in every wave, and take at least two distinct observed values.
+- Module C appendix logits are estimated only when the usable sample is at least 80 observations, each parental-education group has at least 15 observations, and each group contributes at least two events and two non-events.
 - No causal language in Modules A and B.
 - Module C language restricted to association/suggestive evidence.
 

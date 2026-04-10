@@ -107,6 +107,46 @@ if (file.exists(claim_audit_file)) {
 }
 ```
 
+## D1A. Weight And Threshold Diagnostics
+
+The two housekeeping tables below centralize the weighted-sample diagnostics and explicit design thresholds that otherwise sit across several functions. They do not change the estimates, but they make the locked rules easier to audit.
+
+```{r}
+#| label: tbl-weight-diagnostics
+#| tbl-cap: "Weight-distribution diagnostics for the weighted LiTS samples."
+weight_diag_file <- file.path("..", "outputs", "tables", "empirical_weight_diagnostics.csv")
+
+if (file.exists(weight_diag_file)) {
+  weight_diag <- read_csv_safe(weight_diag_file)
+  weight_diag$wave_year[is.na(weight_diag$wave_year)] <- 2022
+  for (col in c("p1", "p5", "p25", "p50", "p75", "p95", "p99")) {
+    weight_diag[[col]] <- fmt_num(weight_diag[[col]], digits = 1)
+  }
+  knitr::kable(
+    weight_diag[, c("sample_label", "wave_year", "p1", "p5", "p25", "p50", "p75", "p95", "p99", "n_non_missing")],
+    col.names = c("Sample", "Wave", "P1", "P5", "P25", "P50", "P75", "P95", "P99", "Non-missing N")
+  )
+} else {
+  data.frame(note = "Weight diagnostics are not available yet.")
+}
+```
+
+```{r}
+#| label: tbl-analysis-thresholds
+#| tbl-cap: "Centralized analysis thresholds used across Modules A-C."
+threshold_file <- file.path("..", "outputs", "tables", "empirical_analysis_thresholds.csv")
+
+if (file.exists(threshold_file)) {
+  thresholds <- read_csv_safe(threshold_file)
+  knitr::kable(
+    thresholds[, c("module", "threshold_id", "threshold_value", "threshold_unit", "applies_to", "rationale")],
+    col.names = c("Module", "Threshold", "Value", "Unit", "Applies to", "Rationale")
+  )
+} else {
+  data.frame(note = "Analysis-threshold registry is not available yet.")
+}
+```
+
 ## D2. Parent-Measure Robustness
 
 ```{r}
@@ -233,6 +273,8 @@ if (file.exists(harmonization_change_file)) {
 }
 ```
 
+The harmonization check leaves the main trend intact. The observed-parent-years variant mainly moves the 2010 level, while the 2016 and 2022-23 slopes remain effectively unchanged. The headline 2010-to-2016 increase therefore survives the most relevant coding asymmetry in the earliest wave, which is why the locked max-parent construction remains the main specification.
+
 ## D3. Parental-Education Missingness Diagnostics
 
 ```{r}
@@ -310,9 +352,11 @@ if (file.exists(parent_missing_sens_file)) {
 }
 ```
 
+Across the observed-only, cell-mode, lower-bound, and upper-bound scenarios, the 2016 rank-rank slope remains above the 2010 slope. The missingness sensitivity mainly reallocates the 2010 level rather than reversing the wave ordering. That is why parental-education missingness is treated as a level and comparability problem, not as a mechanical explanation of the mid-period increase.
+
 ## D4. Module B Specification Discipline
 
-The extended Module B layer is gated by explicit code-level coverage rules. A candidate current-household covariate must be non-missing for at least 20 percent of the pooled sample, non-missing for at least 10 percent of observations in every wave, and exhibit at least two distinct observed values before it can enter the extended specification. The pooled harmonized LiTS analysis files retain a stable region identifier but do not construct a harmonized PSU variable, so the implemented pooled regressions cluster at region as the fallback level.
+The extended Module B layer is gated by explicit code-level coverage rules. A candidate current-household covariate must be non-missing for at least 20 percent of the pooled sample, non-missing for at least 10 percent of observations in every wave, and exhibit at least two distinct observed values before it can enter the extended specification. The pooled harmonized LiTS analysis files retain a stable region identifier but do not construct a harmonized PSU variable, so the implemented pooled regressions cluster at region as the fallback level. Because the Eq. 2 persistence-trend model then relies on only 10 region clusters in 2010 and 2016 and 14 in 2022-23, the wave-comparison table reports conventional region-clustered and Webb wild-cluster-bootstrap p-values side by side. In the manuscript, bootstrap `p <= 0.05` is treated as statistically distinguishable, `0.05 < p <= 0.10` as suggestive, and `p > 0.10` as imprecise.
 
 ```{r}
 #| label: tbl-module-b-covariate-classification
@@ -393,9 +437,11 @@ if (file.exists(module_b_wave_test_file)) {
   module_b_wave_test$estimate <- fmt_num(module_b_wave_test$estimate)
   module_b_wave_test$std.error <- fmt_num(module_b_wave_test$std.error)
   module_b_wave_test$p.value <- vapply(module_b_wave_test$p.value, fmt_p, character(1))
+  module_b_wave_test$bootstrap_p.value <- vapply(module_b_wave_test$bootstrap_p.value, fmt_p, character(1))
+  module_b_wave_test$bootstrap_inference <- gsub("_", " ", module_b_wave_test$bootstrap_inference)
   knitr::kable(
-    module_b_wave_test[, c("spec_label", "comparison_label", "estimate", "std.error", "p.value", "n_used")],
-    col.names = c("Specification", "Conditional slope comparison", "Estimate", "Std. Error", "P-value", "Used N")
+    module_b_wave_test[, c("spec_label", "comparison_label", "estimate", "std.error", "p.value", "bootstrap_p.value", "bootstrap_inference", "cluster_count", "n_used")],
+    col.names = c("Specification", "Conditional slope comparison", "Estimate", "Std. Error", "Clustered p", "Webb bootstrap p", "Bootstrap reading", "Region clusters", "Used N")
   )
 } else {
   data.frame(note = "Module B wave-difference tests are not available yet.")
@@ -403,6 +449,77 @@ if (file.exists(module_b_wave_test_file)) {
 ```
 
 ## D5. Cross-Wave Trend Tests and Composition Checks
+
+```{r}
+#| label: tbl-common-region-rank-rank
+#| tbl-cap: "National rank-rank slope under full-sample and common-region support."
+common_region_rank_file <- file.path("..", "outputs", "tables", "empirical_common_region_rank_rank.csv")
+common_region_transition_file <- file.path("..", "outputs", "tables", "empirical_common_region_transition_comparison.csv")
+
+if (file.exists(common_region_rank_file)) {
+  common_region_rank <- read_csv_safe(common_region_rank_file)
+  common_region_rank$wave_label <- dplyr::recode(
+    as.character(common_region_rank$wave_year),
+    `2010` = "2010",
+    `2016` = "2016",
+    `2022` = "2022-23"
+  )
+  common_region_rank$slope_display <- paste0(
+    fmt_num(common_region_rank$estimate),
+    " [",
+    fmt_num(common_region_rank$ci_low),
+    ", ",
+    fmt_num(common_region_rank$ci_high),
+    "]"
+  )
+  knitr::kable(
+    common_region_rank[, c("sample_support_label", "wave_label", "slope_display", "region_count", "valid_rank_sample_n")],
+    col.names = c("Support sample", "Wave", "Rank-rank slope [95% CI]", "Regions", "Valid rank N")
+  )
+} else {
+  data.frame(note = "Common-region rank-rank comparison is not available yet.")
+}
+```
+
+```{r}
+#| label: tbl-common-region-transitions
+#| tbl-cap: "2022-23 transition matrix under full-sample and common-region support."
+if (file.exists(common_region_transition_file)) {
+  common_region_transition <- read_csv_safe(common_region_transition_file)
+  common_region_transition <- common_region_transition[
+    common_region_transition$wave_year == 2022,
+  ]
+  common_region_transition$share_display <- ifelse(
+    common_region_transition$status == "ok" & !is.na(common_region_transition$share),
+    fmt_pct(common_region_transition$share),
+    "Suppressed"
+  )
+  transition_comp_wide <- reshape(
+    common_region_transition[, c("sample_support_label", "parent_ed_level", "n_parent_total", "own_ed_level", "share_display")],
+    idvar = c("sample_support_label", "parent_ed_level", "n_parent_total"),
+    timevar = "own_ed_level",
+    direction = "wide"
+  )
+  transition_comp_wide <- transition_comp_wide[
+    order(
+      match(transition_comp_wide$sample_support_label, c("Full sample", "Common-region support only")),
+      match(transition_comp_wide$parent_ed_level, c("no_formal", "primary", "lower_secondary", "upper_secondary", "post_secondary_non_tertiary", "tertiary"))
+    ),
+  ]
+  knitr::kable(
+    transition_comp_wide,
+    col.names = c(
+      "Support sample", "Parental origin", "Parent-origin N",
+      "Own: No formal", "Own: Primary", "Own: Lower secondary",
+      "Own: Upper secondary", "Own: Post-secondary", "Own: Tertiary"
+    )
+  )
+} else {
+  data.frame(note = "Common-region transition comparison is not available yet.")
+}
+```
+
+The balanced-region restriction leaves the 2010 and 2016 slopes unchanged because the common-support set matches the effective rank-support regions in those waves. It raises the 2022 slope from 0.253 in the full sample to 0.281 in the common-region sample and shifts the 2022 transition matrix in the same direction. The paper therefore treats the flatter 2016-to-2022 descriptive pattern as partly composition-conditional rather than as a fully balanced geographic comparison.
 
 ```{r}
 #| label: tbl-rank-rank-change-tests
@@ -500,6 +617,12 @@ if (file.exists(model_inventory_file)) {
   data.frame(note = "Empirical model inventory is not available yet.")
 }
 ```
+
+## D7A. Deviations From Initial Plan
+
+- The pooled Module B models cluster at region rather than PSU because the locked harmonized analysis file does not retain a cross-wave PSU identifier.
+- The few-cluster sensitivity for Eq. 2 is implemented with a Webb wild-cluster bootstrap on the fitted `fixest::feols()` objects rather than with a PSU-based correction.
+- The appendix Module C logit keeps only low parental education, urban residence, and their interaction with region fixed effects; the gender term from the earlier plan was dropped to preserve support in the sparse child-module sample.
 
 ## E. Diagnostics Outputs
 

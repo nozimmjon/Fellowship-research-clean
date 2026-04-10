@@ -14,7 +14,6 @@
 /renv/python/
 /renv/staging/
 /renv/cache/
-/renv.lock
 
 /data/raw/*
 !/data/raw/.gitkeep

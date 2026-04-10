@@ -75,15 +75,18 @@ This paper provides reproducible multi-wave evidence on intergenerational educat
 `Persist(i) = alpha + beta*S_parent(i) + d1*(S_parent(i)*Urban(i)) + d2*(S_parent(i)*Female(i)) + d3*(S_parent(i)*D2022) + region_FE + cohort_FE + wave_FE + e(i)`
 
 ### Eq. 6: LiTS IV Mechanism Model (2022-23 only)
-`logit(Pr(M(i)=1)) = alpha + beta*LowParentEdu(i) + eta*Urban(i) + phi*Male(i) + kappa*(LowParentEdu(i)*Urban(i)) + region_FE + e(i)`
+`logit(Pr(M(i)=1)) = alpha + beta*LowParentEdu(i) + eta*Urban(i) + kappa*(LowParentEdu(i)*Urban(i)) + region_FE + e(i)`
 
 ### Eq. 7: HBS Supplemental Model (Appendix-only, conditional)
 Run only if parent-child linkage diagnostics are adequate.
 
 ## 8) Estimation and Language Rules
 - Weighted estimation throughout.
-- Robust standard errors clustered at PSU if retained; otherwise clustered at region.
-- Suppress subgroup outputs for `N < 30`.
+- Descriptive subgroup and transition cells suppressed when valid `N < 30`.
+- Pooled Module B regressions cluster at region because no harmonized PSU identifier is retained in the locked analysis file.
+- Eq. 2 wave-comparison inference is checked with a Webb wild-cluster bootstrap in addition to the conventional region-clustered standard errors.
+- Module B extended controls enter only if pooled non-missing share is at least 20 percent, wave-specific non-missing share is at least 10 percent in every wave, and the variable has at least two observed values.
+- Module C appendix logits are estimated only when the usable sample is at least 80 observations, each parental-education group has at least 15 observations, and each group contributes at least two events and two non-events.
 - No causal verbs in Modules A and B.
 - For Module C use: "associated with", "more likely", "suggestive evidence".
 

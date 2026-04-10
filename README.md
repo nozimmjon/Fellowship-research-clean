@@ -42,15 +42,17 @@ If you want this repo to be fully standalone, copy the raw files into:
 - `data/raw/hbs/`
 - `data/raw/admin/`
 
+The LiTS pipeline now checks for the required raw inputs before execution. If those files are absent, the build stops with a targeted diagnostic instead of failing later inside the harmonization step.
+
 ## Quick Start
 
 1. Open `FellowshipResearch.Rproj` in RStudio.
-2. Install packages if needed:
-   - `source("R/01_packages.R")`
-   - `install_missing_packages()`
-3. Optional reproducible environment bootstrap:
+2. Restore the project library:
    - `source("R/02_renv_bootstrap.R")`
    - `bootstrap_renv()`
+3. If you are not using `renv`, install packages manually:
+   - `source("R/01_packages.R")`
+   - `install_missing_packages()`
 4. Build the pipeline:
    - `source("run_pipeline.R")`
 5. Render the active reports:
@@ -65,6 +67,14 @@ If you want this repo to be fully standalone, copy the raw files into:
    - `quarto render reports/supplementary/41_hbs_descriptive_note.qmd`
 
 Rendered outputs now land in `outputs/rendered/`. Historical submission bundles live in `archive/releases/`.
+
+## Replication Status
+
+- Package state is pinned in `renv.lock`; the preferred setup path is `bootstrap_renv()`.
+- Full end-to-end rebuilds still require the external raw-data payload described above.
+- Raw-data preflight verified on `2026-04-09`: missing LiTS source files now trigger an immediate diagnostic instead of a late harmonization failure.
+- Processed-data report refresh completed on `2026-04-09` for `reports/00_main.qmd` and `reports/10_technical_appendix.qmd`, using the checked-in `data/processed/lits_harmonized.csv` plus refreshed Module A and Module B outputs.
+- Checked-in rendered outputs and tables may exist even when a fresh raw-data rebuild is not possible on a given machine because the source files are unavailable locally.
 
 ## Working Rules
 

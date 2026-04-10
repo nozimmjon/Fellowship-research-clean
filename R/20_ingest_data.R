@@ -6,6 +6,56 @@ select_existing_file <- function(candidates) {
   hits[[1]]
 }
 
+lits_source_candidates <- function(raw_dir) {
+  list(
+    `2010` = c(
+      file.path(raw_dir, "lits_ii.csv"),
+      file.path(raw_dir, "lits2.dta")
+    ),
+    `2016` = c(
+      file.path(raw_dir, "lits_iii.dta"),
+      file.path(raw_dir, "lits_iii.csv")
+    ),
+    `2022` = c(
+      file.path(raw_dir, "lits_iv_dta", "lits_iv.dta")
+    )
+  )
+}
+
+build_lits_input_inventory <- function(raw_dir = file.path(PROJ_PATHS$raw_data, "lits")) {
+  candidates <- lits_source_candidates(raw_dir)
+  tibble::tibble(
+    wave_year = as.integer(names(candidates)),
+    expected_paths = vapply(candidates, function(x) paste(x, collapse = " | "), character(1)),
+    found_path = vapply(candidates, select_existing_file, character(1))
+  )
+}
+
+assert_required_lits_inputs <- function(raw_dir = file.path(PROJ_PATHS$raw_data, "lits")) {
+  inventory <- build_lits_input_inventory(raw_dir)
+  missing <- inventory[is.na(inventory$found_path), , drop = FALSE]
+
+  if (nrow(missing) > 0) {
+    missing_msg <- paste0(
+      "  - LiTS ", missing$wave_year, ": ", missing$expected_paths,
+      collapse = "\n"
+    )
+    stop(
+      paste(
+        "Required LiTS raw inputs were not found.",
+        paste0("Raw data root checked: ", normalizePath(raw_dir, winslash = "/", mustWork = FALSE)),
+        "Expected one source file per wave. Missing wave candidates:",
+        missing_msg,
+        "Set FELLOWSHIP_RAW_DATA_ROOT or place the files under data/raw/lits/ before running the pipeline.",
+        sep = "\n"
+      ),
+      call. = FALSE
+    )
+  }
+
+  invisible(inventory)
+}
+
 read_any_table <- function(path) {
   ext <- tolower(tools::file_ext(path))
   if (ext == "csv") {
@@ -536,11 +586,41 @@ read_lits_2022 <- function(raw_dir) {
 build_lits_harmonized <- function(raw_dir = file.path(PROJ_PATHS$raw_data, "lits")) {
   ensure_project_dirs()
 
-  all_waves <- dplyr::bind_rows(
-    read_lits_2010(raw_dir),
-    read_lits_2016(raw_dir),
-    read_lits_2022(raw_dir)
-  ) %>%
+  assert_required_lits_inputs(raw_dir)
+
+  wave_frames <- list(
+    `2010` = read_lits_2010(raw_dir),
+    `2016` = read_lits_2016(raw_dir),
+    `2022` = read_lits_2022(raw_dir)
+  )
+  unreadable_waves <- names(wave_frames)[vapply(wave_frames, nrow, integer(1)) == 0L]
+
+  if (length(unreadable_waves) > 0) {
+    stop(
+      paste0(
+        "LiTS raw files were found but could not be read into non-empty harmonized data for wave(s): ",
+        paste(unreadable_waves, collapse = ", "),
+        ". Check the file formats and source-variable names in data/raw/lits/."
+      ),
+      call. = FALSE
+    )
+  }
+
+  all_waves <- dplyr::bind_rows(wave_frames)
+  required_cols <- c("wave_year", "age")
+  missing_cols <- setdiff(required_cols, names(all_waves))
+  if (length(missing_cols) > 0) {
+    stop(
+      paste0(
+        "The harmonized LiTS frame is missing required column(s): ",
+        paste(missing_cols, collapse = ", "),
+        ". The rebuild cannot continue."
+      ),
+      call. = FALSE
+    )
+  }
+
+  all_waves <- all_waves %>%
     dplyr::filter(age >= ANALYSIS_SAMPLE$age_min, age <= ANALYSIS_SAMPLE$age_max)
 
   all_waves

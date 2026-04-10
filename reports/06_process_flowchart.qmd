@@ -1,6 +1,6 @@
 ---
 title: "Paper Process Flowchart"
-subtitle: "One-page visual guide for non-academic readers"
+subtitle: "End-to-end map of the live build pipeline"
 author: "Research Team"
 date: today
 format:
@@ -13,54 +13,121 @@ execute:
   message: false
 ---
 
-This is the shortest visual explanation of how the paper is built. For the full plain-English walkthrough, see `reports/05_process_guide.qmd`.
+This page shows the live repo pipeline in two layers. The first diagram is the quick reader-facing version. The second keeps the fuller technical dependency view for people who want the detailed build structure. For the plain-English walkthrough, see `reports/05_process_guide.qmd`.
 
-## The Flow
+## Quick Overview
 
 ```{mermaid}
 flowchart TD
-    A["Locked scope<br/>research_strategy.md<br/>_targets.R"] --> B["LiTS raw files<br/>2010, 2016, 2022-23"]
-    B --> C["Harmonize LiTS<br/>R/20_ingest_data.R<br/>lits_harmonized.csv"]
-    C --> D["Module A<br/>Descriptive mobility measures<br/>R/30_module_a_mobility.R"]
-    D --> E["Tier A packaging<br/>Tables and figures for the paper<br/>R/31_module_a_tier_a_descriptive.R"]
-    C --> F["Module B<br/>Pooled associational models<br/>R/40_module_b_determinants.R"]
-    B --> G["Module C<br/>LiTS IV child-module extension<br/>R/50_module_c_mechanisms.R"]
-    H["HBS raw files"] --> I["HBS support layer<br/>Context + linkage diagnostics<br/>R/31-33 HBS scripts"]
-    E --> J["Empirical audit<br/>R/60_empirical_audit.R"]
+    A["Project setup<br/>config, packages, raw-data checks"] --> B["_targets.R<br/>runs the pipeline"]
+
+    B --> C["LiTS data ingestion<br/>harmonize 2010, 2016, 2022-23"]
+    C --> D["Processed LiTS file<br/>lits_harmonized.csv"]
+
+    D --> E["Module A<br/>descriptive mobility measures"]
+    D --> F["Module B<br/>pooled associational models"]
+    C --> G["Module C<br/>bounded child-module extension"]
+
+    B --> H["HBS support layer<br/>context, linkage diagnostics,<br/>conditional appendix model"]
+
+    E --> I["Empirical audit<br/>robustness, sample flow, claim checks"]
+    F --> I
+    G --> I
+    H --> I
+
+    E --> J["Saved tables and figures"]
     F --> J
     G --> J
+    H --> J
     I --> J
-    E --> K["Main manuscript<br/>reports/00_main.qmd"]
-    F --> K
-    G --> K
-    I --> K
-    J --> K
-    K --> L["Publication outputs<br/>HTML/DOCX paper and appendix"]
+
+    J --> K["Quarto reports<br/>main paper, appendix, brief, slides"]
+    K --> L["Rendered outputs"]
 ```
 
-## What Each Box Means
+This version is the best one to use in the paper process guide or when explaining the project to a non-technical reader.
 
-| Box | Meaning |
-|---|---|
-| Locked scope | Fix the question, modules, and rules before writing results. |
-| LiTS raw files | The core survey source for the paper's intergenerational evidence. |
-| Harmonize LiTS | Convert different waves into one comparable adult analysis file. |
-| Module A | Describe mobility levels, transitions, and persistence across waves. |
-| Tier A packaging | Turn descriptive outputs into manuscript-ready tables and figures. |
-| Module B | Estimate pooled regressions that show conditional associations. |
-| Module C | Add a short, non-causal child-module extension for 2022-23. |
-| HBS support layer | Provide household context and test whether HBS can support an appendix model. |
-| Empirical audit | Check sample flow, formulas, denominators, and whether claims match outputs. |
-| Main manuscript | Pull saved output files into the final paper text, tables, and figures. |
-| Publication outputs | Render the final products readers actually open. |
+## Technical Build Map
 
-## How To Read This As A Beginner
+```{mermaid}
+flowchart TD
+    A["Project bootstrap<br/>R/00_config.R<br/>R/01_packages.R<br/>R/02_renv_bootstrap.R"] --> B["run_pipeline.R<br/>activate local library<br/>check packages<br/>ensure project dirs"]
+    B --> C["LiTS raw-data preflight<br/>assert_required_lits_inputs()"]
+    C --> D["_targets.R<br/>orchestrates the build graph"]
 
-1. Start in the middle, not at the end: the manuscript is assembled from stored outputs rather than typed manually from memory.
-2. Treat Module A as the core facts, Module B as the conditional correlates layer, and Module C as a bounded extension.
-3. Read HBS as supporting context unless the linkage diagnostics justify something stronger.
-4. Use the audit box as the quality-control checkpoint that keeps the paper from drifting away from the code.
+    D --> M1["Data inventory template<br/>R/10_data_inventory.R"]
+    D --> M2["Analysis locks and measure specs<br/>R/12_analysis_specs.R"]
+
+    subgraph L["Core LiTS branch"]
+        L0["LiTS raw files<br/>2010, 2016, 2022-23"] --> L1["Harmonize adult LiTS waves<br/>R/20_ingest_data.R"]
+        L1 --> L2["Processed analytical file<br/>data/processed/lits_harmonized.csv"]
+        L2 --> A1["Module A<br/>mobility metrics<br/>R/30_module_a_mobility.R"]
+        A1 --> A2["Tier A descriptive packaging<br/>R/31_module_a_tier_a_descriptive.R"]
+        A1 --> A3["save_module_a_outputs()"]
+        A2 --> A4["save_module_a_tier_a_outputs()<br/>tables + figures"]
+        L2 --> B1["Module B<br/>pooled associational models<br/>R/40_module_b_determinants.R"]
+        B1 --> B2["save_module_b_outputs()<br/>coefficients, formulas,<br/>wave tests, Webb bootstrap"]
+        L0 --> C1["Module C<br/>LiTS IV child-module extension<br/>R/50_module_c_mechanisms.R"]
+        C1 --> C2["save_module_c_outputs()"]
+    end
+
+    subgraph H["Supplementary HBS branch"]
+        H0["HBS raw files"] --> H1["Household context<br/>R/31_build_hbs_household_context.R"]
+        H0 --> H2["Linkage diagnostics<br/>R/32_build_hbs_linkage_diagnostics.R"]
+        H2 --> H3["Conditional appendix model<br/>R/33_estimate_hbs_appendix_models.R"]
+        H1 --> H4["write_hbs_household_context_outputs()"]
+        H2 --> H5["write_hbs_linkage_outputs()"]
+        H3 --> H6["write_hbs_appendix_model_outputs()"]
+    end
+
+    subgraph Q["Audit and quality control"]
+        Q1["Empirical audit<br/>R/60_empirical_audit.R<br/>sample flow, parent robustness,<br/>common-region checks, weights,<br/>claim audit"] --> Q2["save_empirical_audit_outputs()"]
+    end
+
+    D --> L0
+    D --> H0
+    D -. optional auxiliary input .-> P0["Admin policy panel<br/>build_policy_panel()<br/>not part of the active manuscript path"]
+
+    L2 --> Q1
+    A1 --> Q1
+    B1 --> Q1
+    C1 --> Q1
+    H2 --> Q1
+    H3 --> Q1
+
+    M1 --> O0
+    M2 --> O0
+    A3 --> O0
+    A4 --> O0
+    B2 --> O0
+    C2 --> O0
+    H4 --> O0
+    H5 --> O0
+    H6 --> O0
+    Q2 --> O0
+
+    O0["Saved artifacts<br/>data/metadata<br/>outputs/tables<br/>outputs/figures<br/>outputs/models"] --> R1["Quarto reporting layer<br/>reports/01_start_here.qmd<br/>reports/00_main.qmd<br/>reports/10_technical_appendix.qmd<br/>reports/20_policy_brief.qmd<br/>reports/30_slides.qmd<br/>reports/05_process_guide.qmd<br/>reports/06_process_flowchart.qmd"]
+    R1 --> R2["Rendered deliverables<br/>outputs/rendered/"]
+```
+
+## Reading Notes
+
+1. `run_pipeline.R` handles setup and the LiTS raw-data preflight, then hands execution to `_targets.R`.
+2. Module A and Module B both depend on `data/processed/lits_harmonized.csv`, while Module C reads the LiTS IV child-module inputs directly from the raw LiTS branch.
+3. The HBS path is supplementary by design: diagnostics are built first, and the appendix model only runs if those diagnostics justify it.
+4. `R/90_reporting_helpers.R` is the persistence layer that writes the CSV, PNG, and RDS artifacts later consumed by Quarto.
+5. The manuscript and companion reports read saved artifacts instead of rebuilding the full estimation pipeline inside the report files.
+
+## Layer Summary
+
+| Layer | Main responsibility | Main files |
+|---|---|---|
+| Setup and orchestration | Find the project root, activate libraries, check packages, and launch the target graph. | `R/00_config.R`, `R/01_packages.R`, `R/02_renv_bootstrap.R`, `run_pipeline.R`, `_targets.R` |
+| Core LiTS estimation | Harmonize adult LiTS data, estimate Modules A and B, and run the bounded Module C extension. | `R/20_ingest_data.R`, `R/30_module_a_mobility.R`, `R/31_module_a_tier_a_descriptive.R`, `R/40_module_b_determinants.R`, `R/50_module_c_mechanisms.R` |
+| Supplementary HBS support | Build household context, linkage diagnostics, and the conditional appendix model. | `R/31_build_hbs_household_context.R`, `R/32_build_hbs_linkage_diagnostics.R`, `R/33_estimate_hbs_appendix_models.R` |
+| Audit and persistence | Save artifacts, audit sample flow and robustness, and keep claims aligned with outputs. | `R/60_empirical_audit.R`, `R/90_reporting_helpers.R` |
+| Reporting | Assemble the paper, appendix, brief, slides, and process docs from saved artifacts. | `reports/*.qmd`, `outputs/rendered/` |
 
 ## One-Sentence Summary
 
-The paper is built by cleaning and harmonizing LiTS data, estimating three tightly scoped empirical modules, auditing the outputs, and then assembling those saved outputs into the manuscript.
+The live pipeline bootstraps the project environment, preflights raw LiTS inputs, runs a `targets` graph that builds LiTS and HBS evidence plus audit artifacts, and then renders publication-facing Quarto reports from those saved outputs.

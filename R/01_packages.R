@@ -10,6 +10,7 @@ required_packages <- c(
   "haven",
   "readxl",
   "fixest",
+  "fwildclusterboot",
   "broom",
   "modelsummary",
   "gt",

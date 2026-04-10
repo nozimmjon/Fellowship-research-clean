@@ -305,24 +305,71 @@ compute_directional_rates <- function(df, group_var = NULL, min_n = 30L) {
   label_subgroup(out, group_var)
 }
 
-compute_transition_matrix <- function(df, min_n = 30L) {
+compute_transition_matrix <- function(df, min_n = 30L, conf_level = 0.95) {
   needed <- c("wave_year", "own_ed_level", "parent_ed_level", "sample_weight")
   if (!all(needed %in% names(df)) || nrow(df) == 0) {
     return(tibble::tibble())
   }
 
+  alpha <- 1 - conf_level
+  z_val <- stats::qnorm(1 - alpha / 2)
+
   df %>%
     dplyr::filter(!is.na(parent_ed_level), !is.na(own_ed_level), !is.na(sample_weight), sample_weight > 0) %>%
-    dplyr::group_by(wave_year, parent_ed_level, own_ed_level) %>%
-    dplyr::summarise(n = dplyr::n(), w_n = sum(sample_weight), .groups = "drop") %>%
-    dplyr::group_by(wave_year, parent_ed_level) %>%
     dplyr::mutate(
-      n_parent_total = sum(n),
-      w_parent_total = sum(w_n),
-      share = dplyr::if_else(n_parent_total >= min_n & w_parent_total > 0, w_n / w_parent_total, NA_real_),
-      status = dplyr::if_else(n_parent_total >= min_n, "ok", "small_n")
+      parent_ed_level = factor(parent_ed_level, levels = EDUCATION_LEVELS, ordered = TRUE),
+      own_ed_level = factor(own_ed_level, levels = EDUCATION_LEVELS, ordered = TRUE)
     ) %>%
-    dplyr::ungroup()
+    dplyr::group_by(wave_year, parent_ed_level) %>%
+    dplyr::group_modify(~{
+      dat <- .x
+      n_parent_total <- nrow(dat)
+      w_parent_total <- sum(dat$sample_weight, na.rm = TRUE)
+      effective_n <- weight_effective_n(dat$sample_weight)
+      status <- if (n_parent_total >= min_n) "ok" else "small_n"
+
+      cell_counts <- dat %>%
+        dplyr::group_by(own_ed_level) %>%
+        dplyr::summarise(
+          n = dplyr::n(),
+          w_n = sum(sample_weight, na.rm = TRUE),
+          .groups = "drop"
+        )
+
+      tibble::tibble(
+        own_ed_level = factor(EDUCATION_LEVELS, levels = EDUCATION_LEVELS, ordered = TRUE)
+      ) %>%
+        dplyr::left_join(cell_counts, by = "own_ed_level") %>%
+        dplyr::mutate(
+          n = dplyr::coalesce(as.integer(n), 0L),
+          w_n = dplyr::coalesce(as.numeric(w_n), 0),
+          n_parent_total = n_parent_total,
+          w_parent_total = w_parent_total,
+          effective_n = effective_n,
+          share = dplyr::if_else(status == "ok" & w_parent_total > 0, w_n / w_parent_total, NA_real_),
+          std.error = dplyr::if_else(
+            status == "ok" & !is.na(effective_n) & effective_n > 1,
+            sqrt(pmax(share * (1 - share), 0) / effective_n),
+            NA_real_
+          ),
+          ci_low = dplyr::if_else(
+            is.na(std.error),
+            NA_real_,
+            pmax(0, share - z_val * std.error)
+          ),
+          ci_high = dplyr::if_else(
+            is.na(std.error),
+            NA_real_,
+            pmin(1, share + z_val * std.error)
+          ),
+          status = status
+        )
+    }) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(
+      parent_ed_level = as.character(parent_ed_level),
+      own_ed_level = as.character(own_ed_level)
+    )
 }
 
 compute_persistence_by_parent <- function(df, min_n = 30L) {
@@ -381,7 +428,11 @@ empty_module_a_result <- function(measure_spec, variable_lock) {
       w_n = double(),
       n_parent_total = integer(),
       w_parent_total = double(),
+      effective_n = double(),
       share = double(),
+      std.error = double(),
+      ci_low = double(),
+      ci_high = double(),
       status = character()
     ),
     persistence_by_parent = tibble::tibble(

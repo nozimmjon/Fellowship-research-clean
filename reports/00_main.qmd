@@ -43,6 +43,7 @@ parent_missingness_observables <- read_csv_safe(project_file("outputs", "tables"
 parent_missingness_sensitivity <- read_csv_safe(project_file("outputs", "tables", "empirical_parent_missingness_sensitivity.csv"))
 parent_harmonization_robustness <- read_csv_safe(project_file("outputs", "tables", "empirical_parent_harmonization_robustness.csv"))
 rank_change_tests <- read_csv_safe(project_file("outputs", "tables", "empirical_rank_rank_change_tests.csv"))
+common_region_rank <- read_csv_safe(project_file("outputs", "tables", "empirical_common_region_rank_rank.csv"))
 subgroup_trend_checks <- read_csv_safe(project_file("outputs", "tables", "empirical_subgroup_trend_checks.csv"))
 trend_comparison <- read_csv_safe(project_file("outputs", "tables", "empirical_trend_comparison.csv"))
 hbs_support_context <- read_csv_safe(project_file("outputs", "tables", "hbs_household_support_context.csv"))
@@ -95,6 +96,21 @@ module_b_wave_test_value <- function(specification, comparison, column = "estima
   rows <- module_b_wave_tests[
     module_b_wave_tests$specification == specification &
       module_b_wave_tests$comparison == comparison,
+  ]
+  if (nrow(rows) == 0 || !(column %in% names(rows))) {
+    return(NA)
+  }
+  rows[[column]][1]
+}
+
+common_region_value <- function(sample_support, wave_year, column = "estimate") {
+  needed_cols <- c("sample_support", "wave_year")
+  if (!all(needed_cols %in% names(common_region_rank))) {
+    return(NA)
+  }
+  rows <- common_region_rank[
+    common_region_rank$sample_support == sample_support &
+      common_region_rank$wave_year == wave_year,
   ]
   if (nrow(rows) == 0 || !(column %in% names(rows))) {
     return(NA)
@@ -199,6 +215,8 @@ These measures are reported nationally and, where the denominator permits, by su
 The pooled correlates models are estimated as a nested sequence. All specifications include region, cohort, and wave fixed effects. The minimal specification includes only the parental education term or interaction of interest. The demographic specification adds two clearly pre-determined controls, urban residence and female. The extended specification then adds current household variables that pass the project's coverage screen. A candidate extended control must be non-missing for at least 20 percent of the pooled sample, non-missing for at least 10 percent of observations in every wave, and take at least two distinct observed values. In the current data this extended layer therefore includes migration exposure and multigenerational household structure; the household income proxy remains conceptually relevant but is not retained in the active extended model because its cross-wave support is too uneven. The extended controls are therefore reported as sensitivity variables rather than as clean pre-treatment adjustments.
 
 For pooled inference, the implemented regressions cluster standard errors at the region level. The harmonized LiTS files retain a stable region identifier across waves, but no harmonized PSU variable is constructed in the pooled analysis files, so region clustering is the implemented fallback.
+
+Because those pooled models rely on only 10 region clusters in 2010 and 2016 and 14 in 2022-23, Appendix D4 also reports Webb wild-cluster-bootstrap p-values alongside the conventional region-clustered p-values for the locked persistence-trend comparisons. Throughout the paper, bootstrap `p <= 0.05` is described as statistically distinguishable, `0.05 < p <= 0.10` as suggestive, and `p > 0.10` as imprecise. No omnibus multiple-testing correction is applied across the full family of subgroup and appendix checks, so those results are used as structured corroboration rather than as standalone discovery claims.
 
 ### Pandemic Mechanism Variables
 
@@ -307,6 +325,8 @@ Table @tbl-sample-composition combines the published Tier A sample and completen
 Table @tbl-mobility-metrics reports the paper's locked national mobility measures in a by-wave layout. The rank-rank slope rises from **`r fmt_num(metric_est("rank_rank_slope", 2010))`** in 2010 to **`r fmt_num(metric_est("rank_rank_slope", 2016))`** in 2016 and is **`r fmt_num(metric_est("rank_rank_slope", 2022))`** in 2022-23; the corresponding 95 percent confidence intervals are `r metric_ci("rank_rank_slope", 2010)`, `r metric_ci("rank_rank_slope", 2016)`, and `r metric_ci("rank_rank_slope", 2022)`. The formal raw slope-difference test shows a statistically clear increase from 2010 to 2016 of `r fmt_num(rank_change_value("2010_to_2016", "estimate"))` (p = `r fmt_p(rank_change_value("2010_to_2016", "p.value"))`), but a 2016-to-2022 change of only `r fmt_num(rank_change_value("2016_to_2022", "estimate"))` (p = `r fmt_p(rank_change_value("2016_to_2022", "p.value"))`). Category-based rates tell a similar broad story, with persistence rising and downward mobility falling in the later waves.
 
 The harmonized denominator is now aligned across the rank and category measures within each wave. In 2022-23, both the rank-rank slope and the category-based rates rely on `r fmt_int(metric_n("rank_rank_slope", 2022))` valid observations. The main caution is therefore inferential rather than mechanical: the 2022 national estimates remain noisier than the 2016 values, and several subgroup or regional intervals are wide.
+
+Regional composition matters more for the 2022 comparison than for the earlier waves. When the descriptive series is restricted to the `r fmt_int(common_region_value("common_region_only", 2022, "region_count"))` regions that contribute valid rank support in all three waves, the 2010 and 2016 slopes remain `r fmt_num(common_region_value("common_region_only", 2010))` and `r fmt_num(common_region_value("common_region_only", 2016))`, but the 2022 slope rises to `r fmt_num(common_region_value("common_region_only", 2022))` from `r fmt_num(common_region_value("full_sample", 2022))` in the full sample. Its common-region 95 percent interval is [`r fmt_num(common_region_value("common_region_only", 2022, "ci_low"))`, `r fmt_num(common_region_value("common_region_only", 2022, "ci_high"))`]. Appendix D5 shows that the companion 2022 transition matrix also shifts under this balanced-region support restriction. The post-2016 flattening should therefore be read as partly composition-conditional rather than as a fully balanced geographic comparison.
 
 ```{r}
 #| label: tbl-mobility-metrics
@@ -515,7 +535,7 @@ The main takeaway is that subgroup descriptives are useful for orientation, but 
 
 The pooled rank-based persistence models keep the same fixed-effects structure and vary only in how much additional adjustment is imposed. Across the three nested specifications, the implied conditional 2010 parent-child slope ranges from `r fmt_num(module_b_profile_value("minimal", 2010))` to `r fmt_num(module_b_profile_value("extended", 2010))`, the 2016 slope ranges from `r fmt_num(module_b_profile_value("minimal", 2016))` to `r fmt_num(module_b_profile_value("extended", 2016))`, and the 2022-23 slope ranges from `r fmt_num(module_b_profile_value("minimal", 2022))` to `r fmt_num(module_b_profile_value("extended", 2022))`. The substantive picture is stable across specifications: the conditional association is strongest in 2016, and the 2022-23 gradient is closer to 2016 than to a full reversal back to 2010.
 
-The formal conditional tests mirror the descriptive ones. The 2010-to-2016 slope increase remains positive in the minimal, demographic, and extended specifications at `r fmt_num(module_b_wave_test_value("minimal", "2010_to_2016"))`, `r fmt_num(module_b_wave_test_value("demographic", "2010_to_2016"))`, and `r fmt_num(module_b_wave_test_value("extended", "2010_to_2016"))`, with p-values `r fmt_p(module_b_wave_test_value("minimal", "2010_to_2016", "p.value"))`, `r fmt_p(module_b_wave_test_value("demographic", "2010_to_2016", "p.value"))`, and `r fmt_p(module_b_wave_test_value("extended", "2010_to_2016", "p.value"))`. By contrast, the 2016-to-2022 difference is negative but imprecise in all three specifications (`r fmt_num(module_b_wave_test_value("minimal", "2016_to_2022"))`, `r fmt_num(module_b_wave_test_value("demographic", "2016_to_2022"))`, and `r fmt_num(module_b_wave_test_value("extended", "2016_to_2022"))`; p-values `r fmt_p(module_b_wave_test_value("minimal", "2016_to_2022", "p.value"))`, `r fmt_p(module_b_wave_test_value("demographic", "2016_to_2022", "p.value"))`, and `r fmt_p(module_b_wave_test_value("extended", "2016_to_2022", "p.value"))`). The pooled evidence therefore supports persistence and a mid-period strengthening more clearly than a monotonic worsening in every later wave.
+The formal conditional tests mirror the descriptive ones, and the few-cluster sensitivity leaves the main ranking intact. The 2010-to-2016 slope increase remains positive in the minimal, demographic, and extended specifications at `r fmt_num(module_b_wave_test_value("minimal", "2010_to_2016"))`, `r fmt_num(module_b_wave_test_value("demographic", "2010_to_2016"))`, and `r fmt_num(module_b_wave_test_value("extended", "2010_to_2016"))`, with conventional region-clustered p-values `r fmt_p(module_b_wave_test_value("minimal", "2010_to_2016", "p.value"))`, `r fmt_p(module_b_wave_test_value("demographic", "2010_to_2016", "p.value"))`, and `r fmt_p(module_b_wave_test_value("extended", "2010_to_2016", "p.value"))`, and Webb bootstrap p-values `r fmt_p(module_b_wave_test_value("minimal", "2010_to_2016", "bootstrap_p.value"))`, `r fmt_p(module_b_wave_test_value("demographic", "2010_to_2016", "bootstrap_p.value"))`, and `r fmt_p(module_b_wave_test_value("extended", "2010_to_2016", "bootstrap_p.value"))`. By contrast, the 2016-to-2022 difference is negative but imprecise in all three specifications (`r fmt_num(module_b_wave_test_value("minimal", "2016_to_2022"))`, `r fmt_num(module_b_wave_test_value("demographic", "2016_to_2022"))`, and `r fmt_num(module_b_wave_test_value("extended", "2016_to_2022"))`; bootstrap p-values `r fmt_p(module_b_wave_test_value("minimal", "2016_to_2022", "bootstrap_p.value"))`, `r fmt_p(module_b_wave_test_value("demographic", "2016_to_2022", "bootstrap_p.value"))`, and `r fmt_p(module_b_wave_test_value("extended", "2016_to_2022", "bootstrap_p.value"))`). The 2010-to-2022 contrast is at most suggestive in the minimal model and imprecise once the demographic or extended controls are added. The pooled evidence therefore supports persistence and a mid-period strengthening more clearly than a monotonic worsening in every later wave.
 
 ### Attainment-Score Model
 
@@ -591,7 +611,7 @@ knitr::kable(
 )
 ```
 
-Notes: All specifications include region, cohort, and wave fixed effects. Standard errors are clustered at the region level. The minimal specification includes only the parental term and fixed effects, the demographic specification adds urban residence and female, and the extended specification adds the selected current household controls.
+Notes: All specifications include region, cohort, and wave fixed effects. Standard errors are clustered at the region level. Appendix D4 reports the corresponding Webb wild-cluster-bootstrap p-values for the locked Eq. 2 wave comparisons. The minimal specification includes only the parental term and fixed effects, the demographic specification adds urban residence and female, and the extended specification adds the selected current household controls.
 
 ### Household Support Environment from HBS
 

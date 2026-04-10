@@ -419,6 +419,13 @@ save_empirical_audit_outputs <- function(audit_bundle) {
   sample_flow_path <- file.path(PROJ_PATHS$tables, "empirical_sample_flow.csv")
   inclusion_comp_path <- file.path(PROJ_PATHS$tables, "empirical_inclusion_composition.csv")
   parent_availability_path <- file.path(PROJ_PATHS$tables, "empirical_parent_availability.csv")
+  common_region_rank_path <- file.path(PROJ_PATHS$tables, "empirical_common_region_rank_rank.csv")
+  common_region_change_path <- file.path(PROJ_PATHS$tables, "empirical_common_region_rank_rank_change_tests.csv")
+  common_region_transition_path <- file.path(PROJ_PATHS$tables, "empirical_common_region_transition_comparison.csv")
+  common_region_support_path <- file.path(PROJ_PATHS$tables, "empirical_common_region_support.csv")
+  common_region_support_counts_path <- file.path(PROJ_PATHS$tables, "empirical_common_region_support_counts.csv")
+  weight_diagnostics_path <- file.path(PROJ_PATHS$tables, "empirical_weight_diagnostics.csv")
+  analysis_thresholds_path <- file.path(PROJ_PATHS$tables, "empirical_analysis_thresholds.csv")
   parent_robustness_path <- file.path(PROJ_PATHS$tables, "empirical_parent_measure_robustness.csv")
   parent_harmonization_path <- file.path(PROJ_PATHS$tables, "empirical_parent_harmonization_robustness.csv")
   parent_harmonization_change_path <- file.path(PROJ_PATHS$tables, "empirical_parent_harmonization_change_tests.csv")
@@ -438,6 +445,13 @@ save_empirical_audit_outputs <- function(audit_bundle) {
   safe_write_csv(audit_bundle$sample_flow, sample_flow_path)
   safe_write_csv(audit_bundle$inclusion_composition, inclusion_comp_path)
   safe_write_csv(audit_bundle$parent_availability, parent_availability_path)
+  safe_write_csv(audit_bundle$common_region_rank_rank, common_region_rank_path)
+  safe_write_csv(audit_bundle$common_region_rank_rank_change_tests, common_region_change_path)
+  safe_write_csv(audit_bundle$common_region_transition_comparison, common_region_transition_path)
+  safe_write_csv(audit_bundle$common_region_support, common_region_support_path)
+  safe_write_csv(audit_bundle$common_region_support_counts, common_region_support_counts_path)
+  safe_write_csv(audit_bundle$weight_diagnostics, weight_diagnostics_path)
+  safe_write_csv(audit_bundle$analysis_thresholds, analysis_thresholds_path)
   safe_write_csv(audit_bundle$parent_measure_robustness, parent_robustness_path)
   safe_write_csv(audit_bundle$parent_harmonization_robustness, parent_harmonization_path)
   safe_write_csv(audit_bundle$parent_harmonization_change_tests, parent_harmonization_change_path)
@@ -460,6 +474,13 @@ save_empirical_audit_outputs <- function(audit_bundle) {
     sample_flow_path,
     inclusion_comp_path,
     parent_availability_path,
+    common_region_rank_path,
+    common_region_change_path,
+    common_region_transition_path,
+    common_region_support_path,
+    common_region_support_counts_path,
+    weight_diagnostics_path,
+    analysis_thresholds_path,
     parent_robustness_path,
     parent_harmonization_path,
     parent_harmonization_change_path,

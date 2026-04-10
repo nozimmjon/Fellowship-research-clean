@@ -4,6 +4,8 @@ MODULE_B_POTENTIALLY_ENDOGENOUS_CONTROLS <- c(
   "migration_exposure",
   "multigenerational_hh"
 )
+MODULE_B_WILD_BOOT_REPS <- 9999L
+MODULE_B_WILD_BOOT_SEED <- 20260409L
 
 prepare_module_b_data <- function(df) {
   needed <- c(
@@ -152,17 +154,30 @@ build_fe_formula <- function(lhs, rhs_terms, fe_terms = c("region", "cohort", "w
 }
 
 fit_feols_weighted <- function(formula_obj, data_obj) {
-  if (nrow(data_obj) < 100) {
+  model_vars <- unique(c(all.vars(formula_obj), "sample_weight"))
+  model_vars <- model_vars[model_vars %in% names(data_obj)]
+  data_fit <- if (length(model_vars) == 0) {
+    data_obj
+  } else {
+    data_obj[stats::complete.cases(data_obj[, model_vars, drop = FALSE]), , drop = FALSE]
+  }
+
+  if (nrow(data_fit) < 100) {
     return(NULL)
   }
   # The pooled harmonized files retain region consistently but do not construct a harmonized PSU identifier.
   tryCatch(
-    fixest::feols(
+    {
+      fit <- fixest::feols(
       fml = formula_obj,
-      data = data_obj,
+      data = data_fit,
       weights = ~sample_weight,
       vcov = ~region
-    ),
+    )
+      fit$cluster_var <- "region"
+      fit$cluster_count_region <- dplyr::n_distinct(data_fit$region)
+      fit
+    },
     error = function(e) NULL
   )
 }
@@ -262,6 +277,104 @@ linear_combo_summary <- function(model_obj, weights) {
   )
 }
 
+classify_inference_language <- function(p_value) {
+  dplyr::case_when(
+    is.na(p_value) ~ "unavailable",
+    p_value <= 0.05 ~ "statistically_distinguishable",
+    p_value <= 0.10 ~ "suggestive",
+    TRUE ~ "imprecise"
+  )
+}
+
+wild_cluster_bootstrap_summary <- function(
+    model_obj,
+    weights,
+    cluster_var = "region",
+    boot_reps = MODULE_B_WILD_BOOT_REPS,
+    seed = MODULE_B_WILD_BOOT_SEED
+) {
+  empty <- tibble::tibble(
+    bootstrap_p.value = NA_real_,
+    bootstrap_statistic = NA_real_,
+    bootstrap_conf_low = NA_real_,
+    bootstrap_conf_high = NA_real_,
+    bootstrap_inference = "unavailable",
+    bootstrap_status = "not_run",
+    bootstrap_note = NA_character_,
+    bootstrap_reps = as.integer(boot_reps),
+    bootstrap_weight_type = "webb",
+    bootstrap_algorithm = "fnw11"
+  )
+
+  if (is.null(model_obj) || length(weights) == 0) {
+    return(empty)
+  }
+
+  if (!requireNamespace("fwildclusterboot", quietly = TRUE)) {
+    empty$bootstrap_status <- "package_unavailable"
+    empty$bootstrap_note <- "fwildclusterboot is not installed."
+    return(empty)
+  }
+
+  beta <- stats::coef(model_obj)
+  if (any(!(names(weights) %in% names(beta)))) {
+    empty$bootstrap_status <- "terms_missing"
+    empty$bootstrap_note <- "Requested linear-combination terms are not present in the fitted model."
+    return(empty)
+  }
+
+  params <- names(weights)
+  contrast <- as.numeric(weights)
+
+  set.seed(seed)
+  if (requireNamespace("dqrng", quietly = TRUE)) {
+    dqrng::dqset.seed(seed)
+  }
+  boot_obj <- tryCatch(
+    fwildclusterboot::boottest(
+      object = model_obj,
+      param = params,
+      R = contrast,
+      r = 0,
+      B = boot_reps,
+      clustid = cluster_var,
+      type = "webb",
+      bootstrap_type = "fnw11",
+      conf_int = FALSE,
+      p_val_type = "two-tailed",
+      sampling = "standard",
+      engine = "R"
+    ),
+    error = function(e) e
+  )
+
+  if (inherits(boot_obj, "error")) {
+    empty$bootstrap_status <- "error"
+    empty$bootstrap_note <- conditionMessage(boot_obj)
+    return(empty)
+  }
+
+  bootstrap_p <- if (!is.null(boot_obj$p_val)) {
+    as.numeric(boot_obj$p_val)
+  } else {
+    tryCatch(as.numeric(fwildclusterboot::pval(boot_obj)), error = function(e) NA_real_)
+  }
+  bootstrap_stat <- if (!is.null(boot_obj$t_stat)) as.numeric(boot_obj$t_stat) else NA_real_
+
+  tibble::tibble(
+    bootstrap_p.value = bootstrap_p,
+    bootstrap_statistic = bootstrap_stat,
+    bootstrap_conf_low = NA_real_,
+    bootstrap_conf_high = NA_real_,
+    bootstrap_inference = classify_inference_language(bootstrap_p),
+    bootstrap_status = "ok",
+    bootstrap_note = NA_character_,
+    bootstrap_reps = as.integer(boot_reps),
+    bootstrap_weight_type = "webb",
+    bootstrap_algorithm = "fnw11"
+  )
+}
+
 build_module_b_key_coefficient_comparison <- function(models, formulae) {
   if (length(models) == 0 || nrow(formulae) == 0) {
     return(tibble::tibble())
@@ -356,14 +469,20 @@ build_module_b_wave_difference_tests <- function(models, formulae) {
         `2010_to_2022` = c(2010L, 2022L)
       )
       out <- linear_combo_summary(model_obj, wts)
+      bootstrap_out <- wild_cluster_bootstrap_summary(model_obj, wts)
+      cluster_var_value <- if (!is.null(model_obj$cluster_var)) as.character(model_obj$cluster_var) else "region"
+      cluster_count_value <- if (!is.null(model_obj$cluster_count_region)) as.integer(model_obj$cluster_count_region) else NA_integer_
       dplyr::bind_cols(
         meta %>% dplyr::select(model, model_family, specification, specification_label, n_used),
         tibble::tibble(
           comparison = comparison_id,
           base_wave = waves[[1]],
-          comparison_wave = waves[[2]]
+          comparison_wave = waves[[2]],
+          cluster_var = cluster_var_value,
+          cluster_count = cluster_count_value
         ),
-        out
+        out,
+        bootstrap_out
       )
     })
   })

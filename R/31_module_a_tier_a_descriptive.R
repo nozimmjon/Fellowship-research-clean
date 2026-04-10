@@ -69,7 +69,11 @@ build_tier_a_descriptive <- function(module_a_metrics, lits_harmonized) {
     dplyr::arrange(region, metric, wave_year)
 
   transition_summary <- transition %>%
-    dplyr::select(wave_year, parent_ed_level, own_ed_level, n, n_parent_total, share, status) %>%
+    dplyr::select(dplyr::any_of(c(
+      "wave_year", "parent_ed_level", "own_ed_level",
+      "n", "n_parent_total", "effective_n",
+      "share", "std.error", "ci_low", "ci_high", "status"
+    ))) %>%
     dplyr::arrange(wave_year, parent_ed_level, own_ed_level)
 
   list(
