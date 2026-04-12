@@ -22,20 +22,66 @@ discover_raw_data_root <- function(project_root = PROJECT_ROOT) {
   sibling_legacy_raw <- file.path(dirname(project_root), "Fellowship research", "data", "raw")
   env_raw <- Sys.getenv("FELLOWSHIP_RAW_DATA_ROOT", unset = "")
 
+  has_required_lits_waves <- function(path) {
+    if (!nzchar(path) || !dir.exists(path)) {
+      return(FALSE)
+    }
+
+    lits_dir <- file.path(path, "lits")
+    required <- list(
+      `2010` = c(
+        file.path(lits_dir, "lits_ii.csv"),
+        file.path(lits_dir, "lits2.dta")
+      ),
+      `2016` = c(
+        file.path(lits_dir, "lits_iii.dta"),
+        file.path(lits_dir, "lits_iii.csv")
+      ),
+      `2022` = c(
+        file.path(lits_dir, "lits_iv_dta", "lits_iv.dta")
+      )
+    )
+
+    all(vapply(required, function(paths) any(file.exists(paths)), logical(1)))
+  }
+
   has_payload <- function(path) {
     if (!nzchar(path) || !dir.exists(path)) {
       return(FALSE)
     }
 
+    has_data_files <- function(d) {
+      if (!dir.exists(d)) {
+        return(FALSE)
+      }
+
+      files <- list.files(
+        d,
+        recursive = TRUE,
+        full.names = TRUE,
+        all.files = TRUE,
+        no.. = TRUE,
+        include.dirs = FALSE
+      )
+      if (length(files) == 0) {
+        return(FALSE)
+      }
+
+      keep <- !tolower(basename(files)) %in% c(".gitkeep", "readme.md")
+      any(keep)
+    }
+
     subdirs <- file.path(path, c("lits", "hbs", "admin"))
-    any(vapply(
-      subdirs,
-      function(d) dir.exists(d) && length(list.files(d, all.files = FALSE, no.. = TRUE)) > 0,
-      logical(1)
-    ))
+    any(vapply(subdirs, has_data_files, logical(1)))
   }
 
   candidates <- unique(c(env_raw, local_raw, sibling_legacy_raw))
+  for (candidate in candidates) {
+    if (has_required_lits_waves(candidate)) {
+      return(normalizePath(candidate, winslash = "/", mustWork = TRUE))
+    }
+  }
+
   for (candidate in candidates) {
     if (has_payload(candidate)) {
       return(normalizePath(candidate, winslash = "/", mustWork = TRUE))

@@ -5,6 +5,9 @@ safe_rank <- function(x) {
   rank(x, ties.method = "average", na.last = "keep") / sum(!is.na(x))
 }
 
+# Compute survey-weighted percentile ranks in [0, 1].
+# Groups tied values, accumulates survey weights, and assigns the midpoint
+# of each group's weight mass as its rank.  Handles missing x or w by returning NA.
 weighted_rank <- function(x, w) {
   out <- rep(NA_real_, length(x))
   keep <- !is.na(x) & !is.na(w) & w > 0

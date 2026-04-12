@@ -422,6 +422,9 @@ if (file.exists(module_b_key_file)) {
 #| tbl-cap: "Conditional Module B wave-difference tests across the nested specifications."
 if (file.exists(module_b_wave_test_file)) {
   module_b_wave_test <- read_csv_safe(module_b_wave_test_file)
+  if (nrow(module_b_wave_test) == 0 || !("specification" %in% names(module_b_wave_test))) {
+    data.frame(note = "Module B wave-difference tests produced no results for the current rebuild.")
+  } else {
   module_b_wave_test$spec_label <- dplyr::recode(
     module_b_wave_test$specification,
     minimal = "Minimal",
@@ -443,6 +446,7 @@ if (file.exists(module_b_wave_test_file)) {
     module_b_wave_test[, c("spec_label", "comparison_label", "estimate", "std.error", "p.value", "bootstrap_p.value", "bootstrap_inference", "cluster_count", "n_used")],
     col.names = c("Specification", "Conditional slope comparison", "Estimate", "Std. Error", "Clustered p", "Webb bootstrap p", "Bootstrap reading", "Region clusters", "Used N")
   )
+  }
 } else {
   data.frame(note = "Module B wave-difference tests are not available yet.")
 }
@@ -458,6 +462,9 @@ common_region_transition_file <- file.path("..", "outputs", "tables", "empirical
 
 if (file.exists(common_region_rank_file)) {
   common_region_rank <- read_csv_safe(common_region_rank_file)
+  if (nrow(common_region_rank) == 0 || !("wave_year" %in% names(common_region_rank))) {
+    data.frame(note = "Common-region rank-rank comparison produced no results for the current rebuild.")
+  } else {
   common_region_rank$wave_label <- dplyr::recode(
     as.character(common_region_rank$wave_year),
     `2010` = "2010",
@@ -476,6 +483,7 @@ if (file.exists(common_region_rank_file)) {
     common_region_rank[, c("sample_support_label", "wave_label", "slope_display", "region_count", "valid_rank_sample_n")],
     col.names = c("Support sample", "Wave", "Rank-rank slope [95% CI]", "Regions", "Valid rank N")
   )
+  }
 } else {
   data.frame(note = "Common-region rank-rank comparison is not available yet.")
 }
@@ -486,6 +494,9 @@ if (file.exists(common_region_rank_file)) {
 #| tbl-cap: "2022-23 transition matrix under full-sample and common-region support."
 if (file.exists(common_region_transition_file)) {
   common_region_transition <- read_csv_safe(common_region_transition_file)
+  if (nrow(common_region_transition) == 0 || !("wave_year" %in% names(common_region_transition))) {
+    data.frame(note = "Common-region transition comparison produced no results for the current rebuild.")
+  } else {
   common_region_transition <- common_region_transition[
     common_region_transition$wave_year == 2022,
   ]
@@ -514,12 +525,32 @@ if (file.exists(common_region_transition_file)) {
       "Own: Upper secondary", "Own: Post-secondary", "Own: Tertiary"
     )
   )
+  }
 } else {
   data.frame(note = "Common-region transition comparison is not available yet.")
 }
 ```
 
-The balanced-region restriction leaves the 2010 and 2016 slopes unchanged because the common-support set matches the effective rank-support regions in those waves. It raises the 2022 slope from 0.253 in the full sample to 0.281 in the common-region sample and shifts the 2022 transition matrix in the same direction. The paper therefore treats the flatter 2016-to-2022 descriptive pattern as partly composition-conditional rather than as a fully balanced geographic comparison.
+```{r}
+#| results: asis
+common_region_interp_file <- file.path("..", "outputs", "tables", "empirical_common_region_rank_rank.csv")
+if (file.exists(common_region_interp_file)) {
+  cr_interp <- read_csv_safe(common_region_interp_file)
+  if (nrow(cr_interp) > 0 && "sample_support" %in% names(cr_interp)) {
+    full_2022 <- cr_interp[cr_interp$sample_support == "full_sample" & cr_interp$wave_year == 2022, "estimate"][[1]]
+    cr_2022 <- cr_interp[cr_interp$sample_support == "common_region_only" & cr_interp$wave_year == 2022, "estimate"][[1]]
+    cat(paste0(
+      "The balanced-region restriction leaves the 2010 and 2016 slopes unchanged because the common-support set matches the effective rank-support regions in those waves. It raises the 2022 slope from ",
+      fmt_num(full_2022), " in the full sample to ", fmt_num(cr_2022),
+      " in the common-region sample and shifts the 2022 transition matrix in the same direction. The paper therefore treats the flatter 2016-to-2022 descriptive pattern as partly composition-conditional rather than as a fully balanced geographic comparison."
+    ))
+  } else {
+    cat("The common-region comparison is not yet available for the current rebuild.")
+  }
+} else {
+  cat("The common-region comparison is not yet available for the current rebuild.")
+}
+```
 
 ```{r}
 #| label: tbl-rank-rank-change-tests

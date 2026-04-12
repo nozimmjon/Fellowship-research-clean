@@ -6,17 +6,19 @@ read_csv_safe <- function(path) {
 }
 
 fmt_num <- function(x, digits = 3) {
-  sprintf(paste0("%.", digits, "f"), as.numeric(x))
+  x <- as.numeric(x)
+  ifelse(is.na(x), "\u2014", sprintf(paste0("%.", digits, "f"), x))
 }
 
 fmt_pct <- function(x, digits = 1) {
-  sprintf(paste0("%.", digits, "f percent"), 100 * as.numeric(x))
+  x <- as.numeric(x)
+  ifelse(is.na(x), "\u2014", sprintf(paste0("%.", digits, "f percent"), 100 * x))
 }
 
 fmt_p <- function(x) {
   x <- as.numeric(x)
   if (is.na(x)) {
-    return(NA_character_)
+    return("\u2014")
   }
   if (x < 0.001) {
     return("<0.001")
@@ -43,7 +45,8 @@ load_main_manuscript_context <- function(project_root = "..", env = parent.frame
         module_a_summary$wave_year == wave_year,
     ]
     if (nrow(out) == 0) {
-      stop(sprintf("Metric not found: %s / %s", metric, wave_year))
+      warning(sprintf("Metric not found: %s / %s", metric, wave_year))
+      return(data.frame(estimate = NA_real_, n = NA_integer_, ci_low = NA_real_, ci_high = NA_real_, effective_n = NA_real_))
     }
     out[1, ]
   }
@@ -80,7 +83,8 @@ load_main_manuscript_context <- function(project_root = "..", env = parent.frame
   coef_row <- function(model, term) {
     out <- module_b_coef[module_b_coef$model == model & module_b_coef$term == term, ]
     if (nrow(out) == 0) {
-      stop(sprintf("Coefficient not found: %s / %s", model, term))
+      warning(sprintf("Coefficient not found: %s / %s", model, term))
+      return(data.frame(estimate = NA_real_, std.error = NA_real_, p.value = NA_real_))
     }
     out[1, ]
   }

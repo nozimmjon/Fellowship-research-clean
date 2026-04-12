@@ -73,6 +73,53 @@ read_any_table <- function(path) {
   stop("Unsupported file type: ", ext)
 }
 
+read_source_with_columns <- function(path, columns) {
+  ext <- tolower(tools::file_ext(path))
+  if (ext == "csv") {
+    return(readr::read_csv(
+      path,
+      col_select = dplyr::any_of(columns),
+      show_col_types = FALSE,
+      progress = FALSE
+    ))
+  }
+  if (ext == "dta") {
+    d <- haven::read_dta(path)
+    # Case-insensitive column matching: .dta files may use different casing
+    dta_names_lower <- tolower(names(d))
+    keep_idx <- integer(0)
+    rename_from <- character(0)
+    rename_to <- character(0)
+    for (col in columns) {
+      idx <- match(tolower(col), dta_names_lower)
+      if (!is.na(idx)) {
+        keep_idx <- c(keep_idx, idx)
+        if (names(d)[idx] != col) {
+          rename_from <- c(rename_from, names(d)[idx])
+          rename_to <- c(rename_to, col)
+        }
+      }
+    }
+    d <- d[, unique(keep_idx), drop = FALSE]
+    for (i in seq_along(rename_from)) {
+      names(d)[names(d) == rename_from[i]] <- rename_to[i]
+    }
+    return(d)
+  }
+  stop("Unsupported LiTS source type: ", ext)
+}
+
+ensure_columns <- function(df, columns) {
+  out <- df
+  missing_cols <- setdiff(columns, names(out))
+  if (length(missing_cols) > 0) {
+    for (nm in missing_cols) {
+      out[[nm]] <- NA
+    }
+  }
+  out
+}
+
 infer_wave_from_filename <- function(path) {
   nm <- tolower(basename(path))
   dplyr::case_when(
@@ -103,6 +150,14 @@ map_education_level <- function(x) {
   x_norm <- gsub("_+", "_", gsub("[[:space:]-]+", "_", x))
   dplyr::case_when(
     x_norm %in% EDUCATION_LEVELS ~ x_norm,
+    # LiTS II numeric codes (q515): 0/1=No degree, 2=Primary, 3=Lower secondary,
+    # 4=Upper secondary, 5=Post-secondary non-tertiary, 6=Tertiary (not univ), 7=University+
+    x %in% c("0", "1") ~ "no_formal",
+    x %in% c("2") ~ "primary",
+    x %in% c("3") ~ "lower_secondary",
+    x %in% c("4") ~ "upper_secondary",
+    x %in% c("5") ~ "post_secondary_non_tertiary",
+    x %in% c("6", "7") ~ "tertiary",
     stringr::str_detect(x, "master|phd|bachelor|tertiary education \\(not a university|tertiary") ~ "tertiary",
     stringr::str_detect(x, "post-secondary non-tertiary|post-secondary non tertiary|post secondary non tertiary|post_secondary_non_tertiary") ~ "post_secondary_non_tertiary",
     stringr::str_detect(x, "upper") ~ "upper_secondary",
@@ -165,10 +220,10 @@ coerce_urban_binary <- function(x) {
 coerce_gender_label <- function(x) {
   x <- tolower(as.character(x))
   dplyr::case_when(
-    x %in% c("1", "male", "1 [male]") ~ "male",
     x %in% c("2", "female", "2 [female]") ~ "female",
-    stringr::str_detect(x, "male") ~ "male",
-    stringr::str_detect(x, "female") ~ "female",
+    x %in% c("1", "male", "1 [male]") ~ "male",
+    stringr::str_detect(x, "\\bfemale\\b|woman|girl") ~ "female",
+    stringr::str_detect(x, "\\bmale\\b|man|boy") ~ "male",
     TRUE ~ NA_character_
   )
 }
@@ -248,6 +303,9 @@ yes_no_to_binary <- function(x) {
   )
 }
 
+# Flag households containing both a child (<=17) and an older adult (>=60) among
+# roster members, as a proxy for multigenerational co-residence.  Thresholds follow
+# standard demographic conventions: 17 = pre-adult, 60 = elderly per UN/Uzbek norms.
 build_multigenerational_proxy <- function(df, age_cols, child_max_age = 17, older_min_age = 60) {
   age_cols <- intersect(age_cols, names(df))
   if (length(age_cols) == 0) {
@@ -367,25 +425,44 @@ read_lits_2010 <- function(raw_dir) {
     return(tibble::tibble())
   }
 
-  # LiTS II DTA in this workspace is unreadable for row data, so CSV is primary.
-  if (tolower(tools::file_ext(path)) != "csv") {
-    return(tibble::tibble())
+  source_cols <- c(
+    "country", "country0", "Region1", "Region2", "respondentage", "Select_0", "respondentgender",
+    "tablec", "q515", "q718", "q719", "q708",
+    "q104a_1", "q104a_2", "q104a_3", "q104a_4", "q104a_5", "q104a_6",
+    "q104a_7", "q104a_8", "q104a_9", "q104a_10", "q104a_11", "q104a_12",
+    "weight"
+  )
+  d <- read_source_with_columns(path, source_cols) %>%
+    ensure_columns(source_cols)
+
+  critical_cols <- c("country", "respondentgender", "q515", "q718", "q719", "weight")
+  missing_critical <- critical_cols[vapply(d[critical_cols], function(x) all(is.na(x)), logical(1))]
+  if (length(missing_critical) > 0) {
+    stop(
+      paste0(
+        "LiTS 2010 source is missing required columns or fully empty fields: ",
+        paste(missing_critical, collapse = ", "),
+        ". Source file: ",
+        path
+      ),
+      call. = FALSE
+    )
   }
 
-  d <- readr::read_csv(
-    path,
-    col_select = c("country", "Region1", "Region2", "respondentage", "Select_0", "respondentgender", "tablec", "q515", "q718", "q719", "q708", "q104a_1", "q104a_2", "q104a_3", "q104a_4", "q104a_5", "q104a_6", "q104a_7", "q104a_8", "q104a_9", "q104a_10", "q104a_11", "q104a_12", "weight"),
-    show_col_types = FALSE,
-    progress = FALSE
-  )
-
   d <- d %>%
-    dplyr::filter(stringr::str_detect(stringr::str_to_lower(country), "uzbek")) %>%
+    dplyr::mutate(
+      country_text = as_label_text(country)
+    ) %>%
+    dplyr::filter(country_text == "Uzbekistan") %>%
     dplyr::mutate(
       age_final = dplyr::coalesce(clean_numeric(respondentage), age_from_band(Select_0)),
-      region_final = dplyr::coalesce(Region2, Region1),
+      region_final = dplyr::coalesce(
+        dplyr::na_if(trimws(as_label_text(Region1)), ""),
+        dplyr::na_if(trimws(as_label_text(Region2)), ""),
+        dplyr::na_if(trimws(as_label_text(country0)), "")
+      ),
       migration = yes_no_to_binary(q708),
-      own_level = map_education_level(q515),
+      own_level = map_education_level(as_label_text(q515)),
       own_years = education_level_to_years(own_level),
       father_years = clean_numeric(q718),
       mother_years = clean_numeric(q719),
@@ -606,7 +683,23 @@ build_lits_harmonized <- function(raw_dir = file.path(PROJ_PATHS$raw_data, "lits
     )
   }
 
+  # Log per-wave row counts before merging
+  wave_ns <- vapply(wave_frames, nrow, integer(1))
+  for (wn in names(wave_ns)) {
+    message(sprintf("  Wave %s: %d rows after country filter and harmonization", wn, wave_ns[[wn]]))
+  }
+
   all_waves <- dplyr::bind_rows(wave_frames)
+
+  # Post-merge validation: row count must equal sum of inputs
+  expected_n <- sum(wave_ns)
+  if (nrow(all_waves) != expected_n) {
+    warning(sprintf(
+      "Post-merge row count (%d) differs from expected sum of wave frames (%d).",
+      nrow(all_waves), expected_n
+    ))
+  }
+
   required_cols <- c("wave_year", "age")
   missing_cols <- setdiff(required_cols, names(all_waves))
   if (length(missing_cols) > 0) {
@@ -620,8 +713,22 @@ build_lits_harmonized <- function(raw_dir = file.path(PROJ_PATHS$raw_data, "lits
     )
   }
 
+  # Remove exact duplicate rows (if any) and log
+  n_before_dedup <- nrow(all_waves)
+  all_waves <- dplyr::distinct(all_waves)
+  n_dupes <- n_before_dedup - nrow(all_waves)
+  if (n_dupes > 0) {
+    message(sprintf("  Removed %d exact duplicate rows from harmonized frame.", n_dupes))
+  }
+
+  n_before_age <- nrow(all_waves)
   all_waves <- all_waves %>%
     dplyr::filter(age >= ANALYSIS_SAMPLE$age_min, age <= ANALYSIS_SAMPLE$age_max)
+  message(sprintf(
+    "  Age filter [%d-%d]: %d -> %d rows (%d dropped)",
+    ANALYSIS_SAMPLE$age_min, ANALYSIS_SAMPLE$age_max,
+    n_before_age, nrow(all_waves), n_before_age - nrow(all_waves)
+  ))
 
   all_waves
 }

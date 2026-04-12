@@ -55,6 +55,7 @@ The LiTS pipeline now checks for the required raw inputs before execution. If th
    - `install_missing_packages()`
 4. Build the pipeline:
    - `source("run_pipeline.R")`
+   - If LiTS raw files are unavailable, `run_pipeline.R` now checks for key precomputed artifacts and exits with a clear diagnostic when neither raw inputs nor artifacts are available.
 5. Render the active reports:
    - `quarto render reports/01_start_here.qmd`
    - `quarto render reports/00_main.qmd`
@@ -73,8 +74,10 @@ Rendered outputs now land in `outputs/rendered/`. Historical submission bundles 
 - Package state is pinned in `renv.lock`; the preferred setup path is `bootstrap_renv()`.
 - Full end-to-end rebuilds still require the external raw-data payload described above.
 - Raw-data preflight verified on `2026-04-09`: missing LiTS source files now trigger an immediate diagnostic instead of a late harmonization failure.
-- Processed-data report refresh completed on `2026-04-09` for `reports/00_main.qmd` and `reports/10_technical_appendix.qmd`, using the checked-in `data/processed/lits_harmonized.csv` plus refreshed Module A and Module B outputs.
-- Checked-in rendered outputs and tables may exist even when a fresh raw-data rebuild is not possible on a given machine because the source files are unavailable locally.
+- The replication script `scripts/06_replication.R` has two explicit modes:
+  - `rebuilt_from_raw`: runs `targets::tar_make()` and then renders reports.
+  - `render_from_precomputed_artifacts`: when LiTS raw files are absent, verifies required precomputed tables/figures and renders reports from those artifacts.
+- If neither raw inputs nor required artifacts are available, replication exits with a strict missing-file list instead of silently continuing.
 
 ## Working Rules
 

@@ -52,7 +52,7 @@ prepare_module_c_mechanism_data <- function(raw_dir = file.path(PROJ_PATHS$raw_d
     path,
     col_select = c(
       country, region, urbanity,
-      q110b, q111b,
+      q110a, q110b, q111a, q111b,
       q713, q714, q715a, q715b, q715c, q716, q717, q718a, q718b, q718c, q718d, q718e,
       weight_pop, weight
     )
@@ -63,8 +63,8 @@ prepare_module_c_mechanism_data <- function(raw_dir = file.path(PROJ_PATHS$raw_d
     ) %>%
     dplyr::filter(country == "Uzbekistan") %>%
     dplyr::mutate(
-      father_level = map_education_level(as_label_text(q110b)),
-      mother_level = map_education_level(as_label_text(q111b)),
+      father_level = map_education_level(dplyr::coalesce(as_label_text(q110b), as_label_text(q110a))),
+      mother_level = map_education_level(dplyr::coalesce(as_label_text(q111b), as_label_text(q111a))),
       father_years = education_level_to_years(father_level),
       mother_years = education_level_to_years(mother_level),
       parent_ed_level_max = parent_max_level(father_level, mother_level),
@@ -191,8 +191,8 @@ apply_parent_education_split <- function(df, split_rule = "median") {
 
   split_threshold <- dplyr::case_when(
     split_rule == "median" ~ stats::median(df$parent_years_schooling, na.rm = TRUE),
-    split_rule == "leq_11" ~ 11,
-    split_rule == "leq_9" ~ 9,
+    split_rule == "leq_11" ~ 11,   # 11 years = upper secondary completion in Uzbekistan
+    split_rule == "leq_9" ~ 9,    # 9 years = lower secondary (basic general) completion
     TRUE ~ NA_real_
   )
 
@@ -307,6 +307,7 @@ fit_module_c_outcome_model <- function(df, outcome_var, use_weights = TRUE) {
       dplyr::filter(!is.na(weight_final), weight_final > 0)
   }
 
+  # Require >= 80 obs and outcome variation; below this the logit is unreliable in small child-module splits
   if (nrow(model_df) < 80 || dplyr::n_distinct(model_df[[outcome_var]]) < 2) {
     return(NULL)
   }

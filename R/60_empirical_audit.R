@@ -575,6 +575,7 @@ apply_parent_missingness_scenario <- function(lits_harmonized, scenario_id) {
 
   if (scenario_id == "upper_bound_tertiary") {
     dat$parent_ed_level[missing_idx] <- "tertiary"
+    # 16 years = tertiary completion in the locked education-years mapping (00_config.R EDUCATION_LEVELS)
     dat$parent_years_schooling[missing_idx] <- 16
     return(dat)
   }
@@ -1158,28 +1159,48 @@ build_empirical_claim_audit <- function(master_flags, module_a_metrics, module_b
     for (i in seq_len(nrow(completeness))) {
       wave <- completeness$wave_year[[i]]
       row_id <- row_id + 1L
+      own_cat_n <- completeness$own_category_n[[i]]
+      own_yrs_n <- completeness$own_years_n[[i]]
+      par_cat_n <- completeness$parent_category_n[[i]]
+      par_yrs_n <- completeness$parent_years_n[[i]]
+      completeness_status <- if (own_cat_n == 0 && own_yrs_n == 0) {
+        "fail"
+      } else if (own_yrs_n > own_cat_n || par_yrs_n > par_cat_n) {
+        "needs_review"
+      } else {
+        "ok"
+      }
       rows[[row_id]] <- tibble::tibble(
         module = "module_a",
         check_id = paste0("completeness_alignment_", wave),
-        status = if (completeness$own_years_n[[i]] > completeness$own_category_n[[i]] || completeness$parent_years_n[[i]] > completeness$parent_category_n[[i]]) "needs_review" else "ok",
+        status = completeness_status,
         detail = paste0(
           "Wave ", wave,
-          ": own category N=", completeness$own_category_n[[i]],
-          ", own years N=", completeness$own_years_n[[i]],
-          "; parent category N=", completeness$parent_category_n[[i]],
-          ", parent years N=", completeness$parent_years_n[[i]], "."
+          ": own category N=", own_cat_n,
+          ", own years N=", own_yrs_n,
+          "; parent category N=", par_cat_n,
+          ", parent years N=", par_yrs_n, "."
         )
       )
 
       row_id <- row_id + 1L
+      rank_n <- completeness$rank_model_n[[i]]
+      cat_model_n <- completeness$category_model_n[[i]]
+      rank_status <- if (rank_n == 0 && cat_model_n == 0) {
+        "fail"
+      } else if (cat_model_n < rank_n) {
+        "caution"
+      } else {
+        "ok"
+      }
       rows[[row_id]] <- tibble::tibble(
         module = "module_a",
         check_id = paste0("rank_vs_category_denominator_", wave),
-        status = if (completeness$category_model_n[[i]] < completeness$rank_model_n[[i]]) "caution" else "ok",
+        status = rank_status,
         detail = paste0(
           "Wave ", wave,
-          ": rank-model N=", completeness$rank_model_n[[i]],
-          " versus category-model N=", completeness$category_model_n[[i]], "."
+          ": rank-model N=", rank_n,
+          " versus category-model N=", cat_model_n, "."
         )
       )
     }

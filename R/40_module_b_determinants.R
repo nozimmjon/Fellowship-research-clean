@@ -4,6 +4,9 @@ MODULE_B_POTENTIALLY_ENDOGENOUS_CONTROLS <- c(
   "migration_exposure",
   "multigenerational_hh"
 )
+# 9999 bootstrap replications is standard for publication-quality wild cluster bootstrap.
+# Webb (2014) six-point weights are used because the few-cluster setting (10-14 regions)
+# makes conventional cluster-robust SEs unreliable; see Cameron, Gelbach & Miller (2008).
 MODULE_B_WILD_BOOT_REPS <- 9999L
 MODULE_B_WILD_BOOT_SEED <- 20260409L
 
@@ -70,6 +73,8 @@ prepare_module_b_data <- function(df) {
 
   out <- out %>%
     dplyr::mutate(
+      # Log-transform income (zeros/negatives -> NA); then z-score within wave so the
+      # coefficient is interpretable as "per within-wave SD" regardless of nominal currency shifts.
       hh_income_proxy = dplyr::if_else(!is.na(hh_income_proxy) & hh_income_proxy > 0, log(hh_income_proxy), NA_real_)
     ) %>%
     dplyr::group_by(wave_year_fe) %>%
@@ -165,7 +170,9 @@ fit_feols_weighted <- function(formula_obj, data_obj) {
   if (nrow(data_fit) < 100) {
     return(NULL)
   }
-  # The pooled harmonized files retain region consistently but do not construct a harmonized PSU identifier.
+  # Region clustering is used because no harmonized PSU identifier exists across LiTS waves.
+  # LiTS II/III sampled 10 oblasts, LiTS IV sampled 14; region is the coarsest common geographic unit.
+  # Webb wild-cluster bootstrap (see MODULE_B_WILD_BOOT_REPS) addresses the few-cluster concern.
   tryCatch(
     {
       fit <- fixest::feols(

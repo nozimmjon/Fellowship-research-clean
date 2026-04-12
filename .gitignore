@@ -44,3 +44,7 @@
 *.quarto_ipynb
 
 **/*.quarto_ipynb
+.tmp_raw_rebuild*/
+*.log
+reports/*.tex
+reports/*_files/

@@ -1,14 +1,28 @@
 ---
 title: "Educational Opportunity in Uzbekistan Remains Closely Tied to Family Background"
 subtitle: "Implications for equity in learning, transition, and completion"
-author: "Research Team"
+author:
+  - name: "Nozimjon Ortiqov"
+    affiliation: "Center for Economic Research and Reforms"
+    note: "CAP Fellow"
 date: today
 format:
   html:
     toc: false
     number-sections: false
-  docx:
+    theme: [cosmo, styles/policy-brief.scss]
+  typst:
     toc: false
+    number-sections: false
+    template-partials:
+      - styles/typst-template.typ
+      - styles/typst-show.typ
+    fontsize: 10pt
+    margin:
+      top: 2cm
+      bottom: 2cm
+      x: 2.2cm
+suppress-bibliography: true
 execute:
   echo: false
   warning: false
@@ -41,8 +55,6 @@ hbs_context_value <- function(metric, column = "national") {
 }
 ```
 
-**Audience:** Education policymakers, development partners, and researchers working on equity and human capital in Uzbekistan and Central Asia.
-
 ::: {.callout-note title="Key Messages"}
 - **Family background remains a strong predictor** of educational attainment across all three survey waves (2010, 2016, 2022-23).
 - **The parent-child education link strengthened** between 2010 and 2016; the 2022-23 level is elevated but less precisely estimated.
@@ -50,13 +62,19 @@ hbs_context_value <- function(metric, column = "national") {
 - **Tertiary expansion is necessary but not sufficient.** A larger system does not automatically become a fairer one.
 :::
 
-Uzbekistan's education system has changed rapidly since 2017. The number of higher education institutions nearly doubled from 119 to 222 between 2019/20 and 2024/25. Total enrolled students rose from roughly 441,000 to over 1.4 million.^[Administrative higher-education series verified from official sources compiled for this project.] But this expansion was not uniform. Figure 1 shows that most regions remain far below Tashkent city, and the fastest-growing regions started from the lowest base.
+::: {.callout-important title="At a Glance"}
+**1.4 million+** students enrolled by 2024/25, up from 441,000 in 2019/20 — a threefold increase in five years.\
+**`r fmt_num(metric_est("rank_rank_slope", 2022))`** persistence score in 2022-23 — children's educational rank still closely tracks parental rank.\
+**`r fmt_pct(mech_est("any_remote_challenge"))`** of households report at least one barrier to remote learning during COVID-19.
+:::
+
+Uzbekistan's education system has changed rapidly since 2017. The number of higher education institutions nearly doubled from 119 to 222 between 2019/20 and 2024/25. Total enrolled students rose from roughly 441,000 to over 1.4 million.^[Administrative higher-education series verified from official sources compiled for this project.] But this expansion was not uniform. @fig-expansion shows that most regions remain far below Tashkent city, and the fastest-growing regions started from the lowest base.
 
 ```{r}
 #| label: fig-expansion
-#| fig-cap: "Figure 1. Higher-education expansion in Uzbekistan, 2020/21-2024/25."
-#| fig-height: 5.5
-#| fig-width: 8
+#| fig-cap: "Higher-education expansion in Uzbekistan, 2020/21-2024/25."
+#| fig-height: 4.8
+#| fig-width: 7.5
 library(patchwork)
 
 # --- Panel A: National average trend (bar chart) ---
@@ -69,21 +87,22 @@ names(nat_agg) <- c("year", "students")
 nat_agg$year_label <- paste0(nat_agg$year, "/", substr(nat_agg$year + 1, 3, 4))
 
 p_a <- ggplot2::ggplot(nat_agg, ggplot2::aes(x = factor(year_label, levels = year_label), y = students)) +
-  ggplot2::geom_col(fill = "#1b6ca8", width = 0.6, alpha = 0.85) +
+  ggplot2::geom_col(fill = "#1b6ca8", width = 0.55, alpha = 0.85) +
   ggplot2::geom_text(
     ggplot2::aes(label = round(students)),
-    vjust = -0.4, size = 3.2, color = "grey30"
+    vjust = -0.3, size = 3, color = "grey30"
   ) +
   ggplot2::labs(
     title = "A. National average: students per 1,000 youth (20-24)",
     x = NULL, y = NULL
   ) +
-  ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0.15))) +
-  ggplot2::theme_minimal(base_size = 11) +
+  ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0.12))) +
+  ggplot2::theme_minimal(base_size = 10) +
   ggplot2::theme(
     panel.grid.major.x = ggplot2::element_blank(),
     panel.grid.minor = ggplot2::element_blank(),
-    plot.title = ggplot2::element_text(size = 10, face = "bold")
+    plot.title = ggplot2::element_text(size = 9.5, face = "bold"),
+    plot.margin = ggplot2::margin(t = 2, b = 2, l = 5, r = 5)
   )
 
 # --- Panel B: Regional dumbbell (2020 vs 2024, excluding Tashkent city) ---
@@ -141,26 +160,28 @@ p_b <- ggplot2::ggplot(exp_plot) +
     x = "Students per 1,000 youth (20-24)",
     y = NULL
   ) +
-  ggplot2::theme_minimal(base_size = 11) +
+  ggplot2::theme_minimal(base_size = 10) +
   ggplot2::theme(
     panel.grid.major.y = ggplot2::element_blank(),
     panel.grid.minor = ggplot2::element_blank(),
     legend.position = "bottom",
     legend.margin = ggplot2::margin(t = -5),
-    plot.title = ggplot2::element_text(size = 10, face = "bold"),
-    plot.subtitle = ggplot2::element_text(size = 9, color = "grey40")
+    legend.text = ggplot2::element_text(size = 8.5),
+    plot.title = ggplot2::element_text(size = 9.5, face = "bold"),
+    plot.subtitle = ggplot2::element_text(size = 8.5, color = "grey40"),
+    plot.margin = ggplot2::margin(t = 2, b = 2, l = 5, r = 15)
   )
 
-p_a / p_b + patchwork::plot_layout(heights = c(1, 1.6))
+p_a / p_b + patchwork::plot_layout(heights = c(0.8, 1.6))
 ```
 
 This expansion should be welcomed. But it raises a direct question: does broader access translate into more equal opportunity, or does family background still determine who benefits?
 
 ## Family Background Still Shapes Educational Outcomes
 
-The link between parental and own education is strong in every wave.^[The analysis uses the Life in Transition Survey (LiTS) conducted by the EBRD. The 2010 and 2016 waves covered 10 of Uzbekistan's oblasts; the 2022-23 wave expanded to all 14. The analytical sample is `r format(nrow(lits_harmonized), big.mark = ",")` adults ages 25-64.] The persistence score — a measure of how closely children's education tracks their parents' — rises from `r fmt_num(metric_est("rank_rank_slope", 2010))` in 2010 to `r fmt_num(metric_est("rank_rank_slope", 2016))` in 2016 and stands at `r fmt_num(metric_est("rank_rank_slope", 2022))` in 2022-23 (Figure 2).^[The persistence score is a within-wave rank-rank slope. Higher values mean children's educational rank follows parental rank more closely — less mobility. The 2010-to-2016 increase is statistically significant; the 2016-to-2022 change is not. See the companion main paper for formal tests.]
+The link between parental and own education is strong in every wave.^[The analysis uses the Life in Transition Survey (LiTS) conducted by the EBRD. The 2010 and 2016 waves covered 10 of Uzbekistan's oblasts; the 2022-23 wave expanded to all 14. The analytical sample is `r format(nrow(lits_harmonized), big.mark = ",")` adults ages 25-64.] The persistence score — a measure of how closely children's education tracks their parents' — rises from `r fmt_num(metric_est("rank_rank_slope", 2010))` in 2010 to `r fmt_num(metric_est("rank_rank_slope", 2016))` in 2016 and stands at `r fmt_num(metric_est("rank_rank_slope", 2022))` in 2022-23 (@fig-persistence).^[The persistence score is a within-wave rank-rank slope. Higher values mean children's educational rank follows parental rank more closely — less mobility. The 2010-to-2016 increase is statistically significant; the 2016-to-2022 change is not. See the companion main paper for formal tests.]
 
-![Figure 2. Educational persistence across LiTS waves. Higher values indicate a stronger link between parents' and children's education.](../outputs/figures/tier_a_rank_rank_by_wave.png)
+![Educational persistence across LiTS waves. Higher values indicate a stronger link between parents' and children's education.](../outputs/figures/tier_a_rank_rank_by_wave.png){#fig-persistence}
 
 When the analysis accounts for region, cohort, and wave, parental education remains the strongest predictor of children's attainment. Other factors — urban residence, migration, household structure — are less consistently associated.
 
@@ -190,11 +211,17 @@ These are signals that the costs of staying on track — preparation, connectivi
 
 ## Three Priorities for the Next Reform Phase
 
-**A. Protect learning at key transition points.** Focus on the stages where students fall behind: late primary to lower secondary, lower to upper secondary, and secondary to post-secondary entry. Diagnostic assessments at the start of the school year can identify learning gaps. Structured catch-up support and transition guidance around exam years are higher-yield than generic remediation. Where barriers are household-based — devices, connectivity, transport — support should extend beyond the classroom.
+::: {.callout-tip title="A. Protect learning at key transition points"}
+Focus on the stages where students fall behind: late primary to lower secondary, lower to upper secondary, and secondary to post-secondary entry. Diagnostic assessments at the start of the school year can identify learning gaps. Structured catch-up support and transition guidance around exam years are higher-yield than generic remediation. Where barriers are household-based — devices, connectivity, transport — support should extend beyond the classroom.
+:::
 
-**B. Make tertiary expansion equitable, not only larger.** Outreach to first-generation applicants should begin in secondary school with clear information on pathways, fees, and scholarships. At entry, first-year advising and bridge modules help students arriving with weaker preparation. For retention, need-based aid and early-alert dropout systems matter more than broad but thin programs. Expansion should be judged not only by admissions counts but by whether disadvantaged students enter, stay, and complete at higher rates.
+::: {.callout-tip title="B. Make tertiary expansion equitable, not only larger"}
+Outreach to first-generation applicants should begin in secondary school with clear information on pathways, fees, and scholarships. At entry, first-year advising and bridge modules help students arriving with weaker preparation. For retention, need-based aid and early-alert dropout systems matter more than broad but thin programs. Expansion should be judged not only by admissions counts but by whether disadvantaged students enter, stay, and complete at higher rates.
+:::
 
-**C. Build an equity-monitoring system.** Uzbekistan has a reform narrative around access. It now needs a routine equity dashboard: parental education and household learning conditions from periodic surveys, alongside regional patterns in completion, entry, retention, and graduation from administrative records. If admissions rise but persistence gaps do not narrow, policymakers should see that quickly.
+::: {.callout-tip title="C. Build an equity-monitoring system"}
+Uzbekistan has a reform narrative around access. It now needs a routine equity dashboard: parental education and household learning conditions from periodic surveys, alongside regional patterns in completion, entry, retention, and graduation from administrative records. If admissions rise but persistence gaps do not narrow, policymakers should see that quickly.
+:::
 
 ## Limits of the Evidence
 
