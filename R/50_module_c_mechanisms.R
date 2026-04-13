@@ -43,25 +43,34 @@ apply_module_c_parent_proxy <- function(df, parent_proxy = c("mean_parent_years"
 }
 
 prepare_module_c_mechanism_data <- function(raw_dir = file.path(PROJ_PATHS$raw_data, "lits")) {
-  path <- select_existing_file(c(file.path(raw_dir, "lits_iv_dta", "lits_iv.dta")))
+  path <- select_existing_file(c(
+    file.path(raw_dir, "lits_iv_dta", "lits_iv.dta"),
+    file.path(raw_dir, "lits_iv_dta", "lits_iv.csv")
+  ))
   if (is.na(path)) {
     return(tibble::tibble())
   }
 
-  d <- haven::read_dta(
-    path,
-    col_select = c(
-      country, region, urbanity,
-      q110a, q110b, q111a, q111b,
-      q713, q714, q715a, q715b, q715c, q716, q717, q718a, q718b, q718c, q718d, q718e,
-      weight_pop, weight
-    )
-  ) %>%
+  mod_c_cols <- c(
+    "country", "region", "urbanity",
+    "q110a", "q110b", "q111a", "q111b",
+    "q713", "q714", "q715a", "q715b", "q715c", "q716", "q717", "q718a", "q718b", "q718c", "q718d", "q718e",
+    "weight_pop", "weight"
+  )
+
+  if (grepl("\\.dta$", path)) {
+    d <- haven::read_dta(path, col_select = tidyselect::all_of(mod_c_cols))
+  } else {
+    d <- readr::read_csv(path, show_col_types = FALSE) %>%
+      dplyr::select(tidyselect::any_of(mod_c_cols))
+  }
+
+  d <- d %>%
     dplyr::mutate(
-      country = as.character(haven::as_factor(country)),
-      region = harmonize_uzbekistan_region(as.character(haven::as_factor(region)))
+      country = as_label_text(country),
+      region = harmonize_uzbekistan_region(as_label_text(region))
     ) %>%
-    dplyr::filter(country == "Uzbekistan") %>%
+    dplyr::filter(grepl("Uzbekistan", country, ignore.case = TRUE)) %>%
     dplyr::mutate(
       father_level = map_education_level(dplyr::coalesce(as_label_text(q110b), as_label_text(q110a))),
       mother_level = map_education_level(dplyr::coalesce(as_label_text(q111b), as_label_text(q111a))),

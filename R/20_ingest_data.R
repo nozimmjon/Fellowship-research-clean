@@ -17,7 +17,8 @@ lits_source_candidates <- function(raw_dir) {
       file.path(raw_dir, "lits_iii.csv")
     ),
     `2022` = c(
-      file.path(raw_dir, "lits_iv_dta", "lits_iv.dta")
+      file.path(raw_dir, "lits_iv_dta", "lits_iv.dta"),
+      file.path(raw_dir, "lits_iv_dta", "lits_iv.csv")
     )
   )
 }
@@ -453,7 +454,7 @@ read_lits_2010 <- function(raw_dir) {
     dplyr::mutate(
       country_text = as_label_text(country)
     ) %>%
-    dplyr::filter(country_text == "Uzbekistan") %>%
+    dplyr::filter(grepl("Uzbekistan", country_text, ignore.case = TRUE)) %>%
     dplyr::mutate(
       age_final = dplyr::coalesce(clean_numeric(respondentage), age_from_band(Select_0)),
       region_final = dplyr::coalesce(
@@ -584,25 +585,30 @@ read_lits_2016 <- function(raw_dir) {
 
 read_lits_2022 <- function(raw_dir) {
   path <- select_existing_file(c(
-    file.path(raw_dir, "lits_iv_dta", "lits_iv.dta")
+    file.path(raw_dir, "lits_iv_dta", "lits_iv.dta"),
+    file.path(raw_dir, "lits_iv_dta", "lits_iv.csv")
   ))
   if (is.na(path)) {
     return(tibble::tibble())
   }
 
-  d <- haven::read_dta(
-    path,
-    col_select = c(
-      country, region, know_resp_code, rand_resp_code,
-      q1031, q1032, q1033, q1034, q1035, q1036, q1037, q1038, q1039, q10310,
-      q10311, q10312, q10313, q10314, q10315, q10316, q10317, q10318, q10319, q10320,
-      q1051, q1052, q1053, q1054, q1055, q1056, q1057, q1058, q1059, q10510,
-      q10511, q10512, q10513, q10514, q10515, q10516, q10517, q10518, q10519, q10520,
-      urbanity, q109a, q109b, q110a, q110b, q111a, q111b, q225, q505, weight_pop, weight
-    )
-  ) %>%
+  lits_iv_cols <- c(
+      "country", "region", "know_resp_code", "rand_resp_code",
+      paste0("q103", 1:9), paste0("q1031", 0:9), "q10320",
+      paste0("q105", 1:9), paste0("q1051", 0:9), "q10520",
+      "urbanity", "q109a", "q109b", "q110a", "q110b", "q111a", "q111b", "q225", "q505", "weight_pop", "weight"
+  )
+
+  if (grepl("\\.dta$", path)) {
+    d <- haven::read_dta(path, col_select = tidyselect::all_of(lits_iv_cols))
+  } else {
+    d <- readr::read_csv(path, show_col_types = FALSE) %>%
+      dplyr::select(tidyselect::any_of(lits_iv_cols))
+  }
+
+  d <- d %>%
     dplyr::mutate(
-      country = as.character(haven::as_factor(country)),
+      country = as_label_text(country),
       own_cat = dplyr::coalesce(as_label_text(q109b), as_label_text(q109a)),
       father_cat = dplyr::coalesce(as_label_text(q110b), as_label_text(q110a)),
       mother_cat = dplyr::coalesce(as_label_text(q111b), as_label_text(q111a)),
