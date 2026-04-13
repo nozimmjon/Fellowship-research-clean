@@ -17,13 +17,16 @@
 
 /data/raw/*
 !/data/raw/.gitkeep
+!/data/raw/README.md
 !/data/raw/admin/
 !/data/raw/hbs/
 !/data/raw/lits/
+/data/raw/admin/*
 !/data/raw/admin/.gitkeep
+/data/raw/hbs/*
 !/data/raw/hbs/.gitkeep
+/data/raw/lits/*
 !/data/raw/lits/.gitkeep
-!/data/raw/README.md
 
 /data/processed/*
 !/data/processed/.gitkeep

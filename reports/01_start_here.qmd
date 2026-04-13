@@ -76,7 +76,6 @@ This is the fastest way to understand the whole pipeline at a glance.
 ## Other Outputs
 
 - [Policy brief (HTML)](20_policy_brief.html)
-- [Policy brief (DOCX)](20_policy_brief.docx)
 - [Slides (HTML)](30_slides.html)
 
 ## Source Files
