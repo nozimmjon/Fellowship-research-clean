@@ -76,7 +76,7 @@ Look for:
 - `outputs/tables/*.csv` — the CSV tables consumed by the manuscript
 - `outputs/figures/` — generated figures
 - `outputs/models/` — saved model objects
-- `README.md`, `REPO_STATUS.md`, `AGENTS.md`
+- `README.md`, `notes/progress/REPO_STATUS.md`, `AGENTS.md`
 - `research_strategy.md` or similar design documents
 - `renv.lock`, `DESCRIPTION`
 - `references.bib`
@@ -256,10 +256,10 @@ Create:
 
 ## Phase 5: Write the Report
 
-Check whether `code_review_report.md` already exists. If so, use `code_review_report_v2.md` (or v3, etc.).
+Check whether `notes/reviews/code_review_report.md` already exists. If so, use `notes/reviews/code_review_report_v2.md` (or v3, etc.).
 
 Write the final report as:
-- `code_review_report.md`
+- `notes/reviews/code_review_report.md`
 
 Use this structure:
 

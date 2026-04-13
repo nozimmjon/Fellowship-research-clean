@@ -48,3 +48,10 @@
 *.log
 reports/*.tex
 reports/*_files/
+
+# Policy brief iterations (root-level)
+/policy_brief_v*.pdf
+/policy_brief_page_*.png
+
+# Claude Code worktrees
+/.claude/worktrees/

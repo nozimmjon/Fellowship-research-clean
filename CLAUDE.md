@@ -56,9 +56,10 @@ Required structure: `data/raw/lits/` (lits_ii.csv or lits2.dta, lits_iii.dta, li
 
 ## Current Status
 
-- **Last updated:** 2026-04-12
-- **Current focus:** Fixing 2010 region harmonization (Region2 is empty strings, Region1 has values)
-- **Known issues:** Module B wave-difference tests empty until 2010 region fix verified
+- **Last updated:** 2026-04-13
+- **Current focus:** End-to-end pipeline rebuild is next candidate
+- **Completed:** Main paper prose edit (full voice pass, anti-LLM patterns); Policy brief final archived at `archive/releases/policy_brief_final.pdf`; Quarto policy brief source updated in `reports/22_policy_brief_v3.qmd`; Project folder cleanup (worktrees pruned, root decluttered, review docs relocated to `notes/reviews/`)
+- **Known issues:** Module B wave-difference tests empty until 2010 region fix verified; end-to-end rebuild still pending
 - **Blocked on:** End-to-end rebuild verification after region fix
 
 ## Session Logs

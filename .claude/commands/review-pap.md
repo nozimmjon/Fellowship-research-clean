@@ -173,9 +173,9 @@ Prompt:
 
 After all agents return, synthesize into a single report.
 
-Check whether `preanalysis_check_[YYYY-MM-DD].md` exists. If so, append `-v2`, etc.
+Check whether `notes/reviews/preanalysis_check_[YYYY-MM-DD].md` exists. If so, append `-v2`, etc.
 
-Save to: `preanalysis_check_[YYYY-MM-DD].md`
+Save to: `notes/reviews/preanalysis_check_[YYYY-MM-DD].md`
 
 ```markdown
 # Pre-Analysis Plan Compliance Check

@@ -18,10 +18,15 @@ format:
       - styles/typst-template.typ
       - styles/typst-show.typ
     fontsize: 10pt
+    papersize: a4
     margin:
-      top: 2cm
-      bottom: 2cm
-      x: 2.2cm
+      top: 2.5cm
+      bottom: 2.5cm
+      x: 2.5cm
+    fig-width: 6
+    fig-height: 3.8
+    keep-typ: true
+citeproc: false
 suppress-bibliography: true
 execute:
   echo: false
@@ -32,6 +37,9 @@ execute:
 ```{r}
 source(file.path("..", "R", "91_manuscript_helpers.R"))
 load_main_manuscript_context("..")
+
+is_typst <- identical(knitr::pandoc_to(), "typst")
+is_html  <- knitr::is_html_output()
 
 transition_summary <- read_csv_safe(project_file("outputs", "tables", "tier_a_transition_summary.csv"))
 hbs_support_context <- read_csv_safe(project_file("outputs", "tables", "hbs_household_support_context.csv"))
@@ -55,26 +63,53 @@ hbs_context_value <- function(metric, column = "national") {
 }
 ```
 
+::: {.content-visible when-format="html"}
 ::: {.callout-note title="Key Messages"}
 - **Family background remains a strong predictor** of educational attainment across all three survey waves (2010, 2016, 2022-23).
 - **The parent-child education link strengthened** between 2010 and 2016; the 2022-23 level is elevated but less precisely estimated.
 - **Pandemic disruption fell heavily on households.** Mothers carried most of the learning-support burden, and lower-resourced homes faced more barriers.
 - **Tertiary expansion is necessary but not sufficient.** A larger system does not automatically become a fairer one.
 :::
+:::
 
+```{=typst}
+#info-box(title: "Key Messages")[
+  - *Family background remains a strong predictor* of educational attainment across all three survey waves (2010, 2016, 2022-23).
+  - *The parent-child education link strengthened* between 2010 and 2016; the 2022-23 level is elevated but less precisely estimated.
+  - *Pandemic disruption fell heavily on households.* Mothers carried most of the learning-support burden, and lower-resourced homes faced more barriers.
+  - *Tertiary expansion is necessary but not sufficient.* A larger system does not automatically become a fairer one.
+]
+```
+
+::: {.content-visible when-format="html"}
 ::: {.callout-important title="At a Glance"}
 **1.4 million+** students enrolled by 2024/25, up from 441,000 in 2019/20 — a threefold increase in five years.\
 **`r fmt_num(metric_est("rank_rank_slope", 2022))`** persistence score in 2022-23 — children's educational rank still closely tracks parental rank.\
 **`r fmt_pct(mech_est("any_remote_challenge"))`** of households report at least one barrier to remote learning during COVID-19.
 :::
+:::
+
+```{r}
+#| output: asis
+#| include: true
+if (is_typst) {
+  v1 <- "1.4 million+"
+  l1 <- "students enrolled by 2024/25, up from 441k in 2019/20"
+  v2 <- fmt_num(metric_est("rank_rank_slope", 2022))
+  l2 <- "persistence score in 2022-23"
+  v3 <- fmt_pct(mech_est("any_remote_challenge"))
+  l3 <- "of households faced remote-learning barriers"
+  cat(sprintf('```{=typst}\n#stat-grid((\n  (value: [%s], label: [%s]),\n  (value: [%s], label: [%s]),\n  (value: [%s], label: [%s], color: accent),\n))\n```', v1, l1, v2, l2, v3, l3))
+}
+```
 
 Uzbekistan's education system has changed rapidly since 2017. The number of higher education institutions nearly doubled from 119 to 222 between 2019/20 and 2024/25. Total enrolled students rose from roughly 441,000 to over 1.4 million.^[Administrative higher-education series verified from official sources compiled for this project.] But this expansion was not uniform. @fig-expansion shows that most regions remain far below Tashkent city, and the fastest-growing regions started from the lowest base.
 
 ```{r}
 #| label: fig-expansion
 #| fig-cap: "Higher-education expansion in Uzbekistan, 2020/21-2024/25."
-#| fig-height: 4.8
-#| fig-width: 7.5
+#| fig-height: !expr if (identical(knitr::pandoc_to(), "typst")) 4.2 else 4.8
+#| fig-width: !expr if (identical(knitr::pandoc_to(), "typst")) 6 else 7.5
 library(patchwork)
 
 # --- Panel A: National average trend (bar chart) ---
@@ -211,6 +246,7 @@ These are signals that the costs of staying on track — preparation, connectivi
 
 ## Three Priorities for the Next Reform Phase
 
+::: {.content-visible when-format="html"}
 ::: {.callout-tip title="A. Protect learning at key transition points"}
 Focus on the stages where students fall behind: late primary to lower secondary, lower to upper secondary, and secondary to post-secondary entry. Diagnostic assessments at the start of the school year can identify learning gaps. Structured catch-up support and transition guidance around exam years are higher-yield than generic remediation. Where barriers are household-based — devices, connectivity, transport — support should extend beyond the classroom.
 :::
@@ -222,6 +258,21 @@ Outreach to first-generation applicants should begin in secondary school with cl
 ::: {.callout-tip title="C. Build an equity-monitoring system"}
 Uzbekistan has a reform narrative around access. It now needs a routine equity dashboard: parental education and household learning conditions from periodic surveys, alongside regional patterns in completion, entry, retention, and graduation from administrative records. If admissions rise but persistence gaps do not narrow, policymakers should see that quickly.
 :::
+:::
+
+```{=typst}
+#rec-box("A", "Protect learning at key transition points")[
+  Focus on the stages where students fall behind: late primary to lower secondary, lower to upper secondary, and secondary to post-secondary entry. Diagnostic assessments at the start of the school year can identify learning gaps. Structured catch-up support and transition guidance around exam years are higher-yield than generic remediation. Where barriers are household-based — devices, connectivity, transport — support should extend beyond the classroom.
+]
+
+#rec-box("B", "Make tertiary expansion equitable, not only larger")[
+  Outreach to first-generation applicants should begin in secondary school with clear information on pathways, fees, and scholarships. At entry, first-year advising and bridge modules help students arriving with weaker preparation. For retention, need-based aid and early-alert dropout systems matter more than broad but thin programs. Expansion should be judged not only by admissions counts but by whether disadvantaged students enter, stay, and complete at higher rates.
+]
+
+#rec-box("C", "Build an equity-monitoring system")[
+  Uzbekistan has a reform narrative around access. It now needs a routine equity dashboard: parental education and household learning conditions from periodic surveys, alongside regional patterns in completion, entry, retention, and graduation from administrative records. If admissions rise but persistence gaps do not narrow, policymakers should see that quickly.
+]
+```
 
 ## Limits of the Evidence
 

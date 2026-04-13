@@ -319,9 +319,9 @@ The files to review are: [LIST ALL QMD/MD FILE PATHS HERE]
 
 Check for agent failures — insert placeholder sections if needed.
 
-Check whether `PRE_SUBMISSION_REVIEW_[YYYY-MM-DD].md` exists. If so, append `-v2`, `-v3`, etc.
+Check whether `notes/reviews/PRE_SUBMISSION_REVIEW_[YYYY-MM-DD].md` exists. If so, append `-v2`, `-v3`, etc.
 
-Save to: `PRE_SUBMISSION_REVIEW_[YYYY-MM-DD].md`
+Save to: `notes/reviews/PRE_SUBMISSION_REVIEW_[YYYY-MM-DD].md`
 
 **Report structure:**
 
