@@ -682,10 +682,10 @@ plot_region_ranked <- function(region_table, path) {
 plot_high_low_expansion <- function(expansion_table, path) {
   dat <- expansion_table %>% arrange(desc(pooled_national))
 
-  safe_png_plot(path, width = 1400, height = 900, res = 140, expr = {
+  safe_png_plot(path, width = 1900, height = 900, res = 140, expr = {
     old_par <- par(no.readonly = TRUE)
     on.exit(par(old_par), add = TRUE)
-    par(mar = c(5, 13, 4, 2))
+    par(mar = c(5, 19, 4, 2))
 
     y_pos <- rev(seq_len(nrow(dat)))
     all_vals <- 100 * c(dat$high_expansion, dat$low_expansion)
@@ -700,7 +700,7 @@ plot_high_low_expansion <- function(expansion_table, path) {
       xlab = "Percent of households",
       main = "HBS Support Indicators by High- and Low-Expansion Regions"
     )
-    axis(2, at = y_pos, labels = dat$row_label, las = 2)
+    axis(2, at = y_pos, labels = dat$row_label, las = 2, cex.axis = 0.9)
     grid()
     segments(100 * dat$low_expansion, y_pos, 100 * dat$high_expansion, y_pos, lwd = 2, col = "#c7c7c7")
     points(100 * dat$low_expansion, y_pos, pch = 19, cex = 1.2, col = "#6c757d")
