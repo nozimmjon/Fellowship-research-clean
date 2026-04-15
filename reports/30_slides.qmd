@@ -1,6 +1,6 @@
 ---
-title: "Intergenerational Educational Mobility in Uzbekistan"
-subtitle: "LiTS 2010, 2016, and 2022-23"
+title: "Uzbekistan Expanded Higher Education"
+subtitle: "Did Equality of Opportunity Follow?"
 author: "Nozimjon Ortiqov"
 institute: "Center for Economic Research and Reforms · CAP Fellow"
 date: today
@@ -10,7 +10,7 @@ format:
     incremental: false
     theme: white
     transition: fade
-    footer: "Uzbekistan mobility paper | Descriptive and associational design"
+    footer: "Evidence from three waves of household survey data, 2010–2023"
 execute:
   echo: false
   warning: false
@@ -104,11 +104,11 @@ hbs_context_est <- function(metric) {
 
 ## Motivation
 
-- Educational mobility measures how strongly family background shapes opportunity.
-- Uzbekistan combines a young population, regional inequality, and a human-capital policy agenda.
-- No multi-wave mobility profile exists for Uzbekistan; this paper provides one.
+- Since 2017, Uzbekistan has rapidly expanded higher education: enrollment nearly tripled, institutions roughly doubled.
+- The question is whether this expansion is weakening the link between family background and educational attainment.
+- No multi-wave mobility profile exists for Uzbekistan; this paper provides one using three LiTS waves (2010, 2016, 2022-23).
 
-**Focus:** what the data can credibly show about persistence levels and correlates.
+**Focus:** the expansion is real — but did equality of opportunity follow?
 
 ## Higher-Education Expansion Context
 
@@ -133,16 +133,18 @@ ggplot2::ggplot(nat_agg, ggplot2::aes(x = factor(year_label, levels = year_label
 ```
 
 - HEIs: 119 (2019/20) to 222 (2024/25). Students: ~441K to 1.4M+.
-- Expansion was regionally uneven: Tashkent city dominates.
-- **Question:** does expansion reduce persistence, or does family background still govern who reaches tertiary?
+- National average doubled (73 → 180 students per 1,000 youth 20-24), yet no region outside Tashkent city has caught up with where the capital started.
+- In high-expansion regions, 26% of remittance-receiving households direct remittances to education vs. 16% in low-expansion regions.
 
-## Research Question and Contribution
+**Growth was real but uneven across places — and households still finance access unequally.**
+
+## Research Questions
 
 - How persistent is educational attainment across generations in Uzbekistan?
 - Which household and regional factors are correlated with mobility?
 - What does LiTS IV suggest about household learning conditions during COVID?
 
-**Contribution:** a reproducible three-wave mobility profile — descriptive and associational, not causal.
+**Contribution:** a reproducible three-wave mobility profile — descriptive and associational, not causal. The evidence cannot yet tell us whether expansion is weakening persistence, but it establishes how strong family-background gradients are.
 
 ## Data and Design
 
@@ -152,15 +154,16 @@ ggplot2::ggplot(nat_agg, ggplot2::aes(x = factor(year_label, levels = year_label
 - **Measures:** Rank-rank slope (preferred), upward/downward mobility, persistence rates.
 - **Supplementary:** HBS 2021-2025 (household context only, not mobility estimates).
 
-## Main Descriptive Results
+## Family Background Still Predicts Who Gets Ahead
 
 :::: {.columns}
 ::: {.column width="55%"}
-- Rank-rank slope: `r fmt_num(metric_est("rank_rank_slope", 2010))` (2010), `r fmt_num(metric_est("rank_rank_slope", 2016))` (2016), `r fmt_num(metric_est("rank_rank_slope", 2022))` (2022-23).
-- 2010-to-2016 change: `r fmt_num(rank_change_value("2010_to_2016"))` (p = `r fmt_p(rank_change_value("2010_to_2016", "p.value"))`).
-- 2016-to-2022 change: `r fmt_num(rank_change_value("2016_to_2022"))` (p = `r fmt_p(rank_change_value("2016_to_2022", "p.value"))`).
+- Persistence score: `r fmt_num(metric_est("rank_rank_slope", 2010))` (2010), `r fmt_num(metric_est("rank_rank_slope", 2016))` (2016), `r fmt_num(metric_est("rank_rank_slope", 2022))` (2022-23).
+- 2010→2016: +`r fmt_num(rank_change_value("2010_to_2016"))` (p = `r fmt_p(rank_change_value("2010_to_2016", "p.value"))`).
+- 2016→2022: `r fmt_num(rank_change_value("2016_to_2022"))` (p = `r fmt_p(rank_change_value("2016_to_2022", "p.value"))`).
+- Part of the low 2010 reading may reflect differences in how parental education was recorded.
 
-**The sharpest increase is 2010 to 2016. The 2022-23 level is elevated but the further change is imprecise.**
+**The decline after 2016 is not statistically significant. The central result is stable: family background remains strongly linked to attainment.**
 :::
 ::: {.column width="45%"}
 ![](../outputs/figures/tier_a_rank_rank_by_wave.png){width=100%}
@@ -169,36 +172,47 @@ ggplot2::ggplot(nat_agg, ggplot2::aes(x = factor(year_label, levels = year_label
 
 ## Pooled Correlates (Module B)
 
-- Parental education is the strongest and most stable predictor of attainment: `r fmt_num(coef_est("eq3_attainment_score", "parent_ed_score"))` across specifications.
-- Conditional 2010-to-2016 slope increase stays positive in all three specs (minimal, demographic, extended).
-- Conditional 2016-to-2022 difference is negative but imprecise in all specs.
-- Female coefficient in attainment model is negative: `r fmt_num(coef_est("eq3_attainment_score", "female"))`.
+- Parental education is the strongest predictor of attainment: `r fmt_num(coef_est("eq3_attainment_score", "parent_ed_score"))` across specifications.
+- Adding migration exposure and household structure barely moves the parental-education coefficient — the gradient is not explained by a small set of observable characteristics.
+- Conditional 2010→2016 slope increase stays positive in all three specs.
+- Conditional 2016→2022 difference is negative but imprecise.
 - Wild-cluster bootstrap confirms the pattern under few-cluster robustness.
 
-**Result is stable across specifications: high persistence levels, a clear mid-period strengthening.**
+**The parental-education gradient is stable across specifications and is not driven by observable household characteristics.**
 
-## Pandemic Disruption (Module C)
+## Where You Live and When You Were Born Still Matter
 
-- LiTS IV child-module sample: `r sample_n("^Mechanism sample with non-missing parental schooling$")` respondents.
-- Education stopped during COVID: `r fmt_pct(mech_est("education_stopped_covid"))`.
+- Urban residents show higher upward mobility than rural residents across all three waves.
+- Rural households report higher emigration and remittance receipt, yet the mobility gap persists — remittances alone do not remove structural place-based disadvantage.
+- Younger adults (25-34) show a different cross-wave trajectory from older cohorts, but in every age group and wave, family background still predicts attainment.
+- Regional variation is wide: in 2022-23, persistence scores ranged from near zero in some regions to above 0.4 in Tashkent city.
+
+**No cohort and no region in the data has escaped the family-background pattern.**
+
+## COVID-19 Exposed Unequal Learning Support
+
+- LiTS IV child module: ~`r sample_n("^Mechanism sample with non-missing parental schooling$")` households with school-age children (illustrative, not representative).
+- Education stopped during closures: `r fmt_pct(mech_est("education_stopped_covid"))`.
 - At least one remote-learning barrier: `r fmt_pct(mech_est("any_remote_challenge"))`.
-- Mother as primary support channel: `r fmt_pct(mech_est("support_mother"))`.
+- Mother as primary learning support: `r fmt_pct(mech_est("support_mother"))`.
+- Families with less schooling reported more internet and device problems.
 
-Households with less-educated parents reported more internet and device difficulties. The adjusted stoppage gap by parental education is not stable across specifications.
+When schooling shifted into the household, students from lower-resource families were more exposed. Digital inclusion means more than nominal coverage — it requires reliable connections, working devices, and recognition that not all households can substitute for schools equally.
 
-**Module C establishes the scale of disruption and household burden, not a causal mechanism.**
+**The lesson extends beyond pandemics: when formal instruction is interrupted, existing inequalities are reinforced.**
 
-## HBS Household Support Context
+## Household Budgets Show Why Expansion Alone May Not Be Enough
 
 | Indicator | National |
 |-----------|----------|
-| Enrolled member | `r fmt_pct(hbs_context_est("has_enrolled_member"))` |
 | Positive education spending | `r fmt_pct(hbs_context_est("education_spending_positive"))` |
 | Tutoring | `r fmt_pct(hbs_context_est("has_tutoring"))` |
 | Remittance household | `r fmt_pct(hbs_context_est("has_remittance_hh"))` |
 | Internet access | `r fmt_pct(hbs_context_est("internet_access_hh"))` |
 
-HBS is supplementary context (pooled 2021-2025). Not used for intergenerational estimates.
+- HBS 2021-2025 (supplementary context, not the basis for intergenerational estimates).
+- In high-expansion regions, remittance-for-education spending is 10 pp above low-expansion regions, while overall education spending shares are nearly identical.
+- Expanded supply is interacting with unequal household capacity. New seats can widen access without equalizing who is able to use them.
 
 ## Expansion-Region Comparison
 
@@ -208,30 +222,48 @@ Low-expansion regions have higher emigration/remittances (+5 pp). High-expansion
 
 ## Comparative Context
 
-- Uzbekistan's rank-rank slopes (0.13-0.31) fall in the moderate-to-high range for developing countries.
-- Hertz et al. (2008): cross-country education correlations span roughly 0.20-0.60.
-- Mid-period strengthening is consistent with Turkey and other middle-income settings where expansion coexists with durable family-background gradients.
-- One caveat: the 2010-to-2016 increase could partly reflect measurement improvement (different question format, higher missingness in 2010).
+- Persistence levels fall in a moderate-to-high range for developing and middle-income settings.
+- Hertz et al. (2008): cross-country education correlations span roughly 0.20–0.60.
+- Mid-period strengthening is consistent with Turkey and other middle-income countries where expansion coexists with durable family-background gradients.
+- The 2010 LiTS wave recorded parental education differently (years vs. categories) and had higher missingness — the 2010 level carries more uncertainty than later estimates.
+
+**The right conclusion is narrower than "expansion failed": most adult attainment in 2022-23 was shaped before the post-2017 surge. The data establish how strong persistence is, but cannot yet tell us whether expansion is weakening it.**
 
 ## Key Caveats
 
-- Repeated cross-sections, not a family panel.
-- 2016-to-2022 difference is imprecise; only the 2010-to-2016 increase is statistically clear.
+- Repeated cross-sections, not a family panel — associations, not causal effects.
+- Most respondents completed education before the post-2017 expansion.
+- 2016→2022 difference is imprecise; only the 2010→2016 increase is statistically clear.
+- 2010 wave recorded parental education differently (years, not categories) with higher missingness.
 - Region-clustered SEs with 10-14 clusters; wild bootstrap reported alongside.
 - LiTS II/III covered only 10 of 14 oblasts — common-region sensitivity reported.
+- COVID child module covers ~180 households (illustrative, not representative).
 
-## Policy Implications
+## Three Priorities for More Equitable Expansion
 
-1. Reduce dependence of attainment on family background through transition-stage support (lower-to-upper secondary, secondary-to-post-secondary).
-2. Target household learning bottlenecks: devices, connectivity, caregiver support capacity.
-3. Make tertiary expansion equitable, not only larger — judge by who completes, not only who enters.
-4. Recognize mothers' support burden as part of education policy design.
+**1. Intervene earlier at predictable risk points.**
+
+- Focus on three transitions: end of lower secondary, end of upper secondary, first year of tertiary.
+- Diagnostic assessments tied to remediation at grades 9 and 11; transition guidance for rural and first-generation students.
+- Near-term indicator: entrance-exam participation by region, school type, gender, and rural-urban status.
+
+**2. Judge expansion by who enters, stays, and finishes.**
+
+- Outreach in secondary schools, need-based grants, rural dormitory/transport support.
+- Academic bridge programs and first-year advising for first-generation students.
+- Monitor first-year retention as a routine metric; scale quality assurance with admissions.
+
+**3. Build a routine equity-monitoring system.**
+
+- Link administrative records (enrollment, retention, completion) with household-survey indicators (parental education, urban-rural, gender).
+- First step: publish annual enrollment and completion rates disaggregated by region and gender.
 
 ## Conclusion
 
-- Intergenerational educational persistence in Uzbekistan is substantial.
+- Family background remains a strong predictor of educational attainment in Uzbekistan. Rapid expansion is occurring alongside a wide opportunity gap.
 - The parent-child gradient rose sharply by 2016; parental education remains the strongest pooled correlate.
-- Pandemic disruption was widespread; households — especially mothers — carried the learning-support burden.
+- Pandemic disruption was widespread; mothers carried most of the learning-support burden.
+- Most respondents completed education before the post-2017 expansion — the results establish how strong persistence is, but cannot yet tell us whether expansion is weakening it.
 - Expansion is necessary but not sufficient for equal opportunity.
 - Future work: panel data, administrative education records, quasi-experimental reform evaluation.
 
