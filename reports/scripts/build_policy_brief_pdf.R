@@ -140,3 +140,40 @@ p_b <- ggplot(exp_plot) +
 ggsave("outputs/figures/policy_brief_expansion.png", p_a / p_b + plot_layout(heights = c(0.7, 1.5)),
        width = 6.3, height = 4, dpi = 300, bg = "white")
 message("Wrote outputs/figures/policy_brief_expansion.png")
+
+# ── Pre-render disruption chart ──
+disruption_data <- data.frame(
+  label = c(
+    "Mother as primary support",
+    "Education stopped",
+    "Any remote-learning barrier",
+    "Internet difficulties",
+    "Device constraints",
+    "Father as primary support"
+  ),
+  value = c(87.0, 78.3, 75.8, 72.6, 63.5, 3.7),
+  category = c("Support", "Disruption", "Disruption", "Barriers", "Barriers", "Support"),
+  stringsAsFactors = FALSE
+)
+disruption_data$label <- factor(disruption_data$label, levels = rev(disruption_data$label))
+
+p_disruption <- ggplot(disruption_data, aes(x = value, y = label, fill = category)) +
+  geom_col(width = 0.6, show.legend = FALSE) +
+  geom_text(aes(label = paste0(value, "%")), hjust = -0.15, size = 2.8, color = "grey30") +
+  scale_fill_manual(values = c(
+    "Disruption" = "#1b6ca8",
+    "Barriers" = "#c56b00",
+    "Support" = "#6c7a89"
+  )) +
+  scale_x_continuous(limits = c(0, 102), expand = expansion(mult = c(0, 0))) +
+  labs(x = "Percent of households", y = NULL) +
+  theme_minimal(base_size = 9) +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.margin = margin(t = 2, b = 2, l = 5, r = 10)
+  )
+
+ggsave("outputs/figures/policy_brief_disruption.png", p_disruption,
+       width = 5.5, height = 3, dpi = 300, bg = "white")
+message("Wrote outputs/figures/policy_brief_disruption.png")

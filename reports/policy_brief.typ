@@ -1,4 +1,4 @@
-// Policy Brief — Standalone Typst Document
+// Policy Brief v2 — Standalone Typst Document
 // Intergenerational Educational Mobility in Uzbekistan
 // Build: Rscript reports/scripts/build_policy_brief_pdf.R && quarto typst compile reports/policy_brief.typ
 
@@ -58,6 +58,23 @@
   ]
 }
 
+#let success-box(body) = {
+  block(
+    width: 100%,
+    fill: rgb("#f0faf5"),
+    stroke: (left: 3.5pt + rgb("#2a9d8f"), rest: 0.5pt + rule-light),
+    inset: (x: 14pt, y: 10pt),
+    radius: 2pt,
+    above: 10pt,
+    below: 10pt,
+  )[
+    #text(10pt, weight: "bold", fill: rgb("#2a9d8f"))[What Would Success Look Like?]
+    #v(4pt)
+    #set text(9.5pt)
+    #body
+  ]
+}
+
 #let section-heading(title) = {
   v(8pt)
   block(
@@ -83,7 +100,7 @@
     line(length: 100%, stroke: 0.4pt + rule-light)
     v(3pt)
     set text(7.5pt, fill: text-muted)
-    [Intergenerational Educational Mobility in Uzbekistan — Policy Brief]
+    [Center for Economic Research and Reforms · CAP Fellowship]
     h(1fr)
     [#counter(page).display() of #counter(page).final().first()]
   },
@@ -105,10 +122,10 @@
   radius: 2pt,
 )[
   #set text(fill: white)
-  #text(16pt, weight: "bold")[Educational Opportunity in Uzbekistan
-  Remains Closely Tied to Family Background]
+  #text(16pt, weight: "bold")[Uzbekistan Expanded Higher Education.
+  Did Equality of Opportunity Follow?]
   #v(3pt)
-  #text(10.5pt, style: "italic")[Implications for equity in learning, transition, and completion]
+  #text(10.5pt, style: "italic")[Evidence from 2010–2023]
   #v(8pt)
   #line(length: 30%, stroke: 0.5pt + white.transparentize(40%))
   #v(3pt)
@@ -122,10 +139,9 @@
 // ── Key Messages ──
 #info-box(title: "Key Messages")[
   #set text(9.5pt)
-  - *Family background remains a strong predictor* of educational attainment across all three survey waves (2010, 2016, 2022--23).
-  - *The parent--child education link strengthened* between 2010 and 2016; the 2022--23 level is elevated but less precisely estimated.
-  - *Pandemic disruption fell heavily on households.* Mothers carried most of the learning-support burden, and lower-resourced homes faced more barriers.
-  - *Tertiary expansion is necessary but not sufficient.* A larger system does not automatically become a fairer one.
+  - *Family background remains a strong predictor* of educational attainment. In 2022–23, #val("tertiary_persistence") of respondents from university-educated families also reached university --- while those from less-educated backgrounds were concentrated at upper-secondary level.
+  - *When schools closed, the burden fell on families.* Mothers provided #val("support_mother") of reported learning support. Lower-resourced homes faced more internet and device barriers.
+  - *Tertiary expansion is necessary but not sufficient.* A larger system does not automatically become a fairer one. Whether disadvantaged students enter, stay, and complete is what matters.
 ]
 
 // ── At a Glance ──
@@ -147,85 +163,98 @@
       up from 441K in 2019/20]
     ],
     [
-      #text(18pt, weight: "bold", fill: primary)[#val("persistence_2022")] \
-      #text(8.5pt, fill: text-muted)[persistence score in 2022--23 \
-      family rank still tracks parental rank]
+      #text(18pt, weight: "bold", fill: primary)[#val("tertiary_persistence")] \
+      #text(8.5pt, fill: text-muted)[of university-educated parents' \
+      children also reached university]
     ],
     [
       #text(18pt, weight: "bold", fill: accent)[#val("any_remote_challenge")] \
-      #text(8.5pt, fill: text-muted)[of households face remote-learning barriers during COVID-19]
+      #text(8.5pt, fill: text-muted)[of households faced remote-learning \
+      barriers during COVID-19]
     ],
   )
 ]
 
-// ── Opening context ──
-Uzbekistan's education system has changed rapidly since 2017. The number of higher education institutions nearly doubled from 119 to 222 between 2019/20 and 2024/25. Total enrolled students rose from roughly 441,000 to over 1.4 million.#footnote[Administrative higher-education series verified from official sources compiled for this project.] But this expansion was not uniform. @fig-expansion shows that most regions remain far below Tashkent city, and the fastest-growing regions started from the lowest base.
+// ══════════════════════════════════════════════════════════════
+// SECTION 1: EXPANSION
+// ══════════════════════════════════════════════════════════════
 
-// ── Expansion chart ──
+#section-heading[The Expansion Is Real, but Uneven]
+
+Since 2017, Uzbekistan's higher-education system has grown rapidly. The number of institutions rose from 119 in 2019/20 to 222 by 2024/25. Total enrollment increased from about 441,000 to over 1.4 million.#footnote[Administrative higher-education series compiled from official sources. Covers all recognized higher education institutions nationwide.] But this growth was not uniform. The national average more than doubled --- from 73 to 180 students per 1,000 youth aged 20–24 --- yet no region outside Tashkent city has caught up with where the capital started.
+
 #figure(
-  image("../outputs/figures/policy_brief_expansion.png", width: 95%),
-  caption: [Higher-education expansion in Uzbekistan, 2020/21--2024/25.],
+  image("../outputs/figures/fig1_regional_final.png", width: 95%),
+  caption: [Regional higher-education growth, 2020/21 to 2024/25 (excluding Tashkent city).],
 ) <fig-expansion>
 
-This expansion should be welcomed. But does broader access translate into more equal opportunity, or does family background still determine who benefits?
+Household resources shape who benefits from new capacity. In high-expansion regions, 26 percent of remittance-receiving households direct remittances toward education, compared with 16 percent in low-expansion regions.#footnote[Descriptive comparison from the Household Budget Survey (2021–2025), split by regional expansion intensity.] About 63 percent of households report positive education spending, and 14 percent pay for tutoring. Expanded capacity and unequal household means operate at the same time.
 
 // ══════════════════════════════════════════════════════════════
-// FINDINGS
+// SECTION 2: FAMILY BACKGROUND
 // ══════════════════════════════════════════════════════════════
 
-#section-heading[Family Background Still Shapes Educational Outcomes]
+#section-heading[Family Background Still Determines Who Benefits]
 
-The link between parental and own education is strong in every wave.#footnote[The analysis uses the Life in Transition Survey (LiTS) conducted by the EBRD. The 2010 and 2016 waves covered 10 of Uzbekistan's oblasts; the 2022--23 wave expanded to all 14. The analytical sample is #val("sample_n") adults ages 25--64.] The persistence score --- a measure of how closely children's education tracks their parents' --- rises from #val("persistence_2010") in 2010 to #val("persistence_2016") in 2016 and stands at #val("persistence_2022") in 2022--23 (@fig-persistence).#footnote[The persistence score is a within-wave rank--rank slope. Higher values mean children's educational rank follows parental rank more closely --- less mobility. The 2010-to-2016 increase is statistically significant (_p_ < 0.001); the 2016-to-2022 change is not (_p_ = #val("change_2016_2022_p")).]
+Three waves of the Life in Transition Survey make the inequality concrete.#footnote[The Life in Transition Survey (LiTS) is conducted by the EBRD. The 2010 and 2016 waves covered 10 oblasts; 2022–23 expanded to all 14. Analytical sample: 3,155 adults aged 25–64 with non-missing own and parental education.] In 2022–23, #val("tertiary_persistence") of respondents whose parents had university degrees also attained a degree. Those from upper-secondary backgrounds were split between staying at the same level and moving up. For lower-origin families, the sample is too thin for precise estimates --- which is itself revealing about limited access at the bottom.
+
+A persistence score --- measuring how closely children's educational position tracks their parents' --- confirms this picture across waves.#footnote[The persistence score is a within-wave rank–rank slope. Higher values mean children's educational rank follows parental rank more closely. The 2010 wave recorded parental education differently and had higher missingness; sensitivity checks preserve the wave ordering but the 2010 level carries more uncertainty.] It rose from #val("persistence_2010") in 2010 to #val("persistence_2016") in 2016 (a statistically significant increase, _p_ < 0.01), and stood at #val("persistence_2022") in 2022–23. The decline after 2016 is not statistically significant. In broad international comparison, these levels fall in a moderate-to-high range for developing and middle-income countries.#footnote[Hertz et al. (2008) place intergenerational education correlations between about 0.20 and 0.60 across countries. See also Narayan et al. (2018) and Aydemir and Yazici (2019).]
 
 #figure(
   image("../outputs/figures/tier_a_rank_rank_by_wave.png", width: 75%),
-  caption: [Educational persistence across LiTS waves. Higher values indicate a stronger link between parents' and children's education.],
+  caption: [Persistence score across LiTS waves. Higher values mean children's educational position tracks their parents' more closely.],
 ) <fig-persistence>
 
-When the analysis accounts for region, cohort, and wave, parental education remains the strongest predictor of children's attainment. In 2022--23, #val("tertiary_persistence") of respondents from tertiary-educated families also reached tertiary education. Upward movement exists, but the top of the education ladder remains secure for families already positioned there.
+Controlling for region, birth cohort, urban residence, and gender does not change this conclusion. Parental education remains the strongest predictor of attainment in models combining all three survey waves. Urban residents show higher upward mobility than rural residents in every wave, and regional variation is wide --- the 2022–23 persistence score ranged from near zero in some regions to above 0.4 in Tashkent city.
 
-#section-heading[Disruption Falls Hardest on Under-Resourced Homes]
-
-The 2022--23 LiTS wave includes a module on children's learning during COVID-19.#footnote[This covers a smaller subsample: respondents with a child enrolled before COVID and non-missing parental schooling. Results describe patterns; they are not causal estimates.] The scale of disruption was large:
-
-- #val("stopped_covid") of households report a child's education stopped during COVID.
-- #val("any_remote_challenge") report at least one barrier to remote learning.
-- #val("challenge_internet") report internet difficulties; #val("challenge_device") report device constraints.
-
-When formal schooling was interrupted, the burden shifted onto families. Mothers were reported as the primary learning-support channel in #val("support_mother") of cases; fathers in only #val("support_father"). Households with less-educated parents reported more internet and device difficulties. The adjusted stoppage gap by parental education is not stable across specifications --- what the evidence establishes is the scale of household burden, not a causal mechanism.
-
-#section-heading[Expansion Is Growing but Not Yet Fair]
-
-Supplementary household budget data show the environment in which families make education decisions:#footnote[HBS 2021--2025, pooled. Used only for context --- the parent--child linkage rate in HBS is too low for intergenerational mobility estimates.]
-
-- #val("edu_spending") of households report positive education spending.
-- #val("tutoring") report tutoring expenditure.
-- #val("remittances") receive remittances; #val("internet_access") have internet access.
-
-These are signals that the costs of staying on track sit partly inside the household. When admissions expand, students from better-resourced families are better positioned to benefit.
+The available evidence does not yet show that expansion is weakening the relationship between parental background and children's attainment. Most adult attainment observed in 2022–23 was shaped before the post-2017 surge in tertiary provision, so the expansion has not yet had time to reshape these survey profiles. But the persistence of family-background effects signals that access alone will not close the gap.
 
 // ══════════════════════════════════════════════════════════════
-// RECOMMENDATIONS
+// SECTION 3: COVID DISRUPTION
+// ══════════════════════════════════════════════════════════════
+
+#section-heading[When Schools Closed, Families Were on Their Own]
+
+The 2022–23 LiTS child module covers roughly 180 households with school-age children --- a small subsample, but the disruption it records is large.#footnote[Respondents with a child enrolled before COVID and non-missing parental schooling. Results describe patterns; they are not causal estimates.]
+
+#figure(
+  image("../outputs/figures/policy_brief_disruption.png", width: 80%),
+  caption: [COVID-19 disruption and household learning support. Source: LiTS IV (2022–23) child module, Uzbekistan subsample (~180 households).],
+) <fig-disruption>
+
+#val("stopped_covid") of households reported that a child's education stopped entirely. Nearly three in four faced at least one barrier to remote learning: #val("challenge_internet") cited internet problems, #val("challenge_device") lacked adequate devices. When formal schooling was interrupted, mothers provided most reported learning support --- #val("support_mother") of cases, compared with #val("support_father") for fathers. Families with less-educated parents reported more internet and device difficulties.
+
+The lesson extends beyond pandemics. When formal instruction is interrupted, students from lower-resource families are more exposed. Digital inclusion requires reliable connections, working devices, and a realistic acknowledgment that not all households can substitute for schools equally.
+
+// ══════════════════════════════════════════════════════════════
+// SECTION 4: RECOMMENDATIONS
 // ══════════════════════════════════════════════════════════════
 
 #section-heading[Three Priorities for the Next Reform Phase]
 
-#rec-box("A", "Protect learning at key transition points")[
-  Focus on the stages where students fall behind: late primary to lower secondary, lower to upper secondary, and secondary to post-secondary entry. Diagnostic assessments can identify learning gaps. Structured catch-up support and transition guidance around exam years are higher-yield than generic remediation.
+The evidence in this brief is descriptive. It does not estimate the effect of specific reforms. Even so, it points to three areas where policy can be better matched to the problem the data reveal.
+
+#rec-box("A", "Intervene earlier and at predictable risk points")[
+  The pattern is consistent with disadvantage accumulating before tertiary entry. The Ministry of Preschool and School Education and regional education departments should focus on three transitions: end of lower secondary, end of upper secondary, and first year of tertiary. *Near-term (2026–27):* diagnostic assessments tied to remediation at grades 9 and 11, with rural districts prioritized. *Medium-term (2027–29):* structured academic support and transition guidance for students from first-generation and rural backgrounds around national exam years. Concrete indicator: entrance-exam participation and first-year enrollment rates disaggregated by region, gender, and rural-urban status.
 ]
 
-#rec-box("B", "Make tertiary expansion equitable, not only larger")[
-  Outreach to first-generation applicants should begin in secondary school. At entry, first-year advising and bridge modules help students arriving with weaker preparation. Expansion should be judged not only by admissions counts but by whether disadvantaged students enter, stay, and complete at higher rates.
+#rec-box("B", "Judge tertiary expansion by who enters, stays, and finishes")[
+  Additional seats do not address information gaps, weaker preparation, or unfamiliarity with application procedures. *Near-term:* the Ministry of Higher Education, Science and Innovation should require new and branch-campus institutions in high-expansion regions to run structured outreach in secondary schools. *Medium-term:* need-based grants, rural dormitory and transport support, and preparatory courses in low-access districts. Academic bridge programs and first-year advising should be standard for students whose parents did not attend university. *Ongoing:* first-year retention monitored as a routine metric; quality assurance scaled with admissions.
 ]
 
-#rec-box("C", "Build an equity-monitoring system")[
-  Uzbekistan needs a routine equity dashboard: parental education and household learning conditions from periodic surveys, alongside regional patterns in completion, entry, retention, and graduation from administrative records.
+#rec-box("C", "Build a routine equity-monitoring system")[
+  Uzbekistan currently has no regular mechanism for tracking whether opportunity is becoming more equal. *Near-term (2026–27):* the National Statistics Committee, in coordination with the Ministry of Higher Education, Science and Innovation, should publish annual enrollment and completion rates disaggregated by region and gender --- existing administrative data already support this. *Longer-term (2028+):* a dashboard linking administrative records on enrollment, retention, exam participation, and completion with household-survey indicators of parental education, urban-rural residence, and learning conditions.
+]
+
+// ── Success criteria ──
+#success-box[
+  In five years, an effective equity strategy would show: (a) rising first-generation tertiary enrollment, (b) narrowing urban-rural completion gaps, (c) a measurable reduction in the persistence score toward the lower end of the international range, and (d) routine public reporting of disaggregated outcomes. The LiTS data used here cover only three snapshots over 13 years. A system built on administrative records could provide annual updates and flag disparities as they develop.
 ]
 
 // ══════════════════════════════════════════════════════════════
 // LIMITS
 // ══════════════════════════════════════════════════════════════
 
-#section-heading[Limits of the Evidence]
+#section-heading[A Note on the Evidence]
 
-This brief relies on descriptive and associational evidence from repeated cross-sections. It does not identify the causal effect of post-2017 reforms, university expansion, or pandemic policy responses.#footnote[The companion main paper and technical appendix report full methods, diagnostics, and robustness checks.] The child-module extension covers a small subsample and describes patterns rather than isolates a mechanism.
+This brief draws on patterns in repeated cross-sectional survey data. It does not estimate causal effects of specific reforms. Most adult attainment observed in the surveys was shaped before the post-2017 expansion, so the results establish how strong family-background persistence is but cannot yet tell us whether the expansion is weakening it. The COVID module covers a small subsample and illustrates patterns rather than proves mechanisms. These are real limitations --- but they do not diminish the central finding: family background remains a strong predictor of educational attainment in Uzbekistan, and rapid expansion is occurring alongside a wide opportunity gap. Full methods, diagnostics, and robustness tests are in the companion research paper and technical appendix.

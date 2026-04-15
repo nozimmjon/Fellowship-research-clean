@@ -47,7 +47,7 @@
         Uzbekistan Expanded Higher Education.#linebreak()Did Equality of Opportunity Follow?
       ]
       #v(4pt)
-      #text(10.5pt, style: "italic")[Evidence from three waves of household survey data, 2010–2023]
+      #text(10.5pt, style: "italic")[Evidence from 2010–2023]
       #v(10pt)
       #line(length: 30%, stroke: 0.5pt + rgb("#ffffff").transparentize(40%))
       #v(4pt)
