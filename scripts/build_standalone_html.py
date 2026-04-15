@@ -102,23 +102,46 @@ for sec in sections:
     sec = re.sub(r'<div[^>]*class="[^"]*figure[^"]*"[^>]*>', '<figure>', sec)
 
     # Remove Quarto callout wrappers (already extracted above into key_messages_html / success_html)
-    sec = re.sub(
-        r'<div[^>]*class="[^"]*callout-note[^"]*"[^>]*>.*?</div>\s*</div>\s*</div>',
-        '', sec, flags=re.DOTALL
-    )
-    sec = re.sub(
-        r'<div[^>]*class="[^"]*callout-tip[^"]*"[^>]*>.*?</div>\s*</div>\s*</div>',
-        '', sec, flags=re.DOTALL
-    )
+    # The Quarto callout markup nests multiple divs (header, icon, title, body),
+    # so we count open/close div tags to strip the entire block.
+    def strip_callout(html_src, cls):
+        """Remove a Quarto callout div by class, handling arbitrary div nesting."""
+        pattern = re.compile(rf'<div[^>]*class="[^"]*{cls}[^"]*"[^>]*>', re.DOTALL)
+        m = pattern.search(html_src)
+        if not m:
+            return html_src
+        start = m.start()
+        depth = 1
+        pos = m.end()
+        while depth > 0 and pos < len(html_src):
+            open_m = re.search(r'<div[\s>]', html_src[pos:])
+            close_m = re.search(r'</div>', html_src[pos:])
+            if close_m is None:
+                break
+            if open_m and open_m.start() < close_m.start():
+                depth += 1
+                pos += open_m.end()
+            else:
+                depth -= 1
+                pos += close_m.end()
+        return html_src[:start] + html_src[pos:]
+
+    sec = strip_callout(sec, 'callout-note')
+    sec = strip_callout(sec, 'callout-tip')
 
     # Wrap recommendation paragraphs (bold numbered items)
+    # Each rec runs from its bold-numbered <p> to just before the next rec or <hr>
     sec = re.sub(r'<p>(<strong>\d\.)', r'<div class="rec"><p>\1', sec)
     parts = sec.split('<div class="rec">')
     if len(parts) > 1:
         new_parts = [parts[0]]
         for part in parts[1:]:
-            # Close at next rec or at a non-paragraph element
-            new_parts.append('<div class="rec">' + part + '</div>')
+            # Close the rec div before any <hr> so the closing note stays outside
+            if "<hr>" in part:
+                hr_idx = part.index("<hr>")
+                new_parts.append('<div class="rec">' + part[:hr_idx] + '</div>\n' + part[hr_idx:])
+            else:
+                new_parts.append('<div class="rec">' + part + '</div>')
         sec = "".join(new_parts)
 
     section_html += sec
@@ -151,6 +174,8 @@ body {
   font-size: 10.5pt;
   line-height: 1.55;
   color: #2c3e50;
+  orphans: 3;
+  widows: 3;
 }
 h1 {
   font-size: 18pt;
@@ -177,6 +202,7 @@ h2 {
   border-top: 2pt solid #1b6ca8;
   padding-top: 6pt;
   margin: 18pt 0 8pt 0;
+  page-break-after: avoid;
 }
 p {
   margin: 0 0 8pt 0;
@@ -228,11 +254,12 @@ li {
 figure {
   margin: 14pt 0;
   text-align: center;
-  page-break-inside: avoid;
 }
 figure img {
   max-width: 100%;
+  max-height: 250pt;
   height: auto;
+  width: auto;
 }
 figcaption {
   font-size: 8.5pt;
