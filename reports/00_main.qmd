@@ -1,9 +1,8 @@
 ---
 title: "Family Background and Educational Attainment in Uzbekistan, 2010–2023"
-author:
-  - name: "Nozimjon Ortiqov"
-    affiliation: "Center for Economic Research and Reforms"
+author: "Nozimjon Ortiqov\\thanks{Center for Economic Research and Reforms}"
 date: today
+date-format: "MMMM YYYY"
 bibliography: ../references.bib
 link-citations: true
 format:
@@ -222,7 +221,7 @@ The paper reports these measures nationally and, where the denominator permits, 
 
 ### Summary Statistics
 
-Table @tbl-summary-stats reports the key variables by wave. Own and parental education years both rise across waves, reflecting both compositional shifts and expansion. The 2022-23 wave has a smaller sample and a higher female share in the unweighted data, though survey weights correct this for estimation.
+@tbl-summary-stats reports the key variables by wave. Own and parental education years both rise across waves, reflecting both compositional shifts and expansion. The 2022-23 wave has a smaller sample and a higher female share in the unweighted data, though survey weights correct this for estimation.
 
 ```{r}
 #| label: tbl-summary-stats
@@ -261,7 +260,7 @@ The pooled correlates models are estimated as a nested sequence. All specificati
 
 For pooled inference, the implemented regressions cluster standard errors at the region level. The harmonized LiTS files retain a stable region identifier across waves, but no harmonized PSU variable is constructed in the pooled analysis files, so region clustering is the implemented fallback.
 
-Because those pooled models rely on only 10 region clusters in 2010 and 2016 and 14 in 2022-23, Appendix D4 also reports Webb wild-cluster-bootstrap p-values alongside the conventional region-clustered p-values for the main persistence-trend comparisons. Throughout the paper, bootstrap `p <= 0.05` is described as statistically distinguishable, `0.05 < p <= 0.10` as suggestive, and `p > 0.10` as imprecise. No omnibus multiple-testing correction is applied across the full family of subgroup and appendix checks, so those results are used as structured corroboration, not standalone discovery claims.
+Because those pooled models rely on only 10 region clusters in 2010 and 2016 and 14 in 2022-23, Appendix D4 also reports Webb wild-cluster-bootstrap p-values alongside the conventional region-clustered p-values for the main persistence-trend comparisons. Throughout the paper, bootstrap $p \leq 0.05$ is described as statistically distinguishable, $0.05 < p \leq 0.10$ as suggestive, and $p > 0.10$ as imprecise. No omnibus multiple-testing correction is applied across the full family of subgroup and appendix checks, so those results are used as structured corroboration, not standalone discovery claims.
 
 ### Pandemic Mechanism Variables
 
@@ -296,7 +295,7 @@ Y_i
 + \rho_1 U_i + \rho_2 F_i + X_i' \gamma + \mu_r + \lambda_c + \tau_w + \varepsilon_i
 $$
 
-Table @tbl-spec-map summarizes how the pooled equation maps onto each specification. Throughout, coefficients are interpreted as conditional associations rather than causal effects.
+@tbl-spec-map summarizes how the pooled equation maps onto each specification. Throughout, coefficients are interpreted as conditional associations rather than causal effects.
 
 ```{r}
 #| label: tbl-spec-map
@@ -333,7 +332,7 @@ The third module uses the 2022-23 child module to document disruption and househ
 
 ### Sample Composition and Completeness
 
-Table @tbl-sample-composition reports the analytical base by wave. The age-restricted Uzbekistan LiTS samples contain `r fmt_int(sample_by_wave$n_total[sample_by_wave$wave_year == 2010])` respondents in 2010, `r fmt_int(sample_by_wave$n_total[sample_by_wave$wave_year == 2016])` in 2016, and `r fmt_int(sample_by_wave$n_total[sample_by_wave$wave_year == 2022])` in 2022-23. The 2022-23 wave is somewhat more female in the unweighted analytical sample, although the weighted estimation sample is much closer to balanced, while the cohort mix remains centered on the younger and middle adult cohorts in all three surveys.
+@tbl-sample-composition reports the analytical base by wave. The age-restricted Uzbekistan LiTS samples contain `r fmt_int(sample_by_wave$n_total[sample_by_wave$wave_year == 2010])` respondents in 2010, `r fmt_int(sample_by_wave$n_total[sample_by_wave$wave_year == 2016])` in 2016, and `r fmt_int(sample_by_wave$n_total[sample_by_wave$wave_year == 2022])` in 2022-23. The 2022-23 wave is somewhat more female in the unweighted analytical sample, although the weighted estimation sample is much closer to balanced, while the cohort mix remains centered on the younger and middle adult cohorts in all three surveys.
 
 Parental-education missingness is not uniform across waves. After harmonization, respondents' own education is fully observed in all three waves, while weighted parental-education missingness is `r fmt_pct(missingness_value(2010, "weighted_parent_missing_share"))` in 2010, `r fmt_pct(missingness_value(2016, "weighted_parent_missing_share"))` in 2016, and `r fmt_pct(missingness_value(2022, "weighted_parent_missing_share"))` in 2022-23. Missing-parent cases are older and somewhat less educated in 2010 and 2016: the weighted age gap is about `r fmt_num(missingness_stat_value(2010, "mean_age"))` years in 2010 and `r fmt_num(missingness_stat_value(2016, "mean_age"))` years in 2016, while the weighted own-schooling gap is about `r fmt_num(missingness_stat_value(2010, "mean_own_years"))` and `r fmt_num(missingness_stat_value(2016, "mean_own_years"))` years, respectively. Missingness therefore threatens level comparability most clearly in the earliest wave. Parental education is also retrospectively reported, so recall error and the coarse category-to-years harmonization in 2010 can attenuate the observed slope toward zero.
 
@@ -390,11 +389,11 @@ knitr::kable(
 
 Notes: Valid N is the age-25-64 Uzbekistan analytical sample in each wave. Female and urban shares are unweighted analytical-sample shares, while the missingness columns report the share of respondents with missing own or parental education in the harmonized wave files.
 
-Table @tbl-sample-composition combines the published Tier A sample and completeness outputs with simple analytical-sample composition shares from the harmonized LiTS file. Appendix D3 adds missing-versus-observed diagnostics and simple sensitivity checks. A wave-by-cohort-by-sex-by-urban mode-imputation sensitivity moves the national rank-rank slopes to `r fmt_num(sensitivity_value("cell_mode_imputed", 2010, "rank_rank_slope"))`, `r fmt_num(sensitivity_value("cell_mode_imputed", 2016, "rank_rank_slope"))`, and `r fmt_num(sensitivity_value("cell_mode_imputed", 2022, "rank_rank_slope"))`, while even the extreme all-low and all-high assignments preserve the same wave ordering of the national slopes. Parental-education missingness widens uncertainty around levels, especially in 2010, but does not mechanically create the 2016 peak.
+@tbl-sample-composition combines the published Tier A sample and completeness outputs with simple analytical-sample composition shares from the harmonized LiTS file. Appendix D3 adds missing-versus-observed diagnostics and simple sensitivity checks. A wave-by-cohort-by-sex-by-urban mode-imputation sensitivity moves the national rank-rank slopes to `r fmt_num(sensitivity_value("cell_mode_imputed", 2010, "rank_rank_slope"))`, `r fmt_num(sensitivity_value("cell_mode_imputed", 2016, "rank_rank_slope"))`, and `r fmt_num(sensitivity_value("cell_mode_imputed", 2022, "rank_rank_slope"))`, while even the extreme all-low and all-high assignments preserve the same wave ordering of the national slopes. Parental-education missingness widens uncertainty around levels, especially in 2010, but does not mechanically create the 2016 peak.
 
 ### National Mobility Metrics by Wave
 
-Table @tbl-mobility-metrics reports the paper's core national mobility measures in a by-wave layout. The rank-rank slope rises from **`r fmt_num(metric_est("rank_rank_slope", 2010))`** in 2010 to **`r fmt_num(metric_est("rank_rank_slope", 2016))`** in 2016 and is **`r fmt_num(metric_est("rank_rank_slope", 2022))`** in 2022-23; the corresponding 95 percent confidence intervals are `r metric_ci("rank_rank_slope", 2010)`, `r metric_ci("rank_rank_slope", 2016)`, and `r metric_ci("rank_rank_slope", 2022)`. The formal raw slope-difference test shows a statistically clear increase from 2010 to 2016 of `r fmt_num(rank_change_value("2010_to_2016", "estimate"))` (p = `r fmt_p(rank_change_value("2010_to_2016", "p.value"))`), but a 2016-to-2022 change of only `r fmt_num(rank_change_value("2016_to_2022", "estimate"))` (p = `r fmt_p(rank_change_value("2016_to_2022", "p.value"))`). Category-based rates tell a similar broad story, with persistence rising and downward mobility falling in the later waves.
+@tbl-mobility-metrics reports the paper's core national mobility measures in a by-wave layout. The rank-rank slope rises from **`r fmt_num(metric_est("rank_rank_slope", 2010))`** in 2010 to **`r fmt_num(metric_est("rank_rank_slope", 2016))`** in 2016 and is **`r fmt_num(metric_est("rank_rank_slope", 2022))`** in 2022-23; the corresponding 95 percent confidence intervals are `r metric_ci("rank_rank_slope", 2010)`, `r metric_ci("rank_rank_slope", 2016)`, and `r metric_ci("rank_rank_slope", 2022)`. The formal raw slope-difference test shows a statistically clear increase from 2010 to 2016 of `r fmt_num(rank_change_value("2010_to_2016", "estimate"))` (p = `r fmt_p(rank_change_value("2010_to_2016", "p.value"))`), but a 2016-to-2022 change of only `r fmt_num(rank_change_value("2016_to_2022", "estimate"))` (p = `r fmt_p(rank_change_value("2016_to_2022", "p.value"))`). Category-based rates tell a similar broad story, with persistence rising and downward mobility falling in the later waves.
 
 The harmonized denominator is now aligned across the rank and category measures within each wave. In 2022-23, both the rank-rank slope and the category-based rates rely on `r fmt_int(metric_n("rank_rank_slope", 2022))` valid observations. The main caution is inferential, not mechanical: the 2022 national estimates remain noisier than the 2016 values, and several subgroup or regional intervals are wide.
 
@@ -448,7 +447,7 @@ knitr::kable(
 
 Notes: Rank-rank slopes are within-wave survey-weighted OLS slopes of respondent rank on parental rank with analytic 95 percent confidence intervals. Upward, downward, and persistence rates are weighted category-based shares computed on the same valid parent-child denominator within each wave.
 
-Table @tbl-mobility-metrics and Figures @fig-rank-rank and @fig-directional-rates tell the same high-level story: educational persistence is substantial in every wave, the statistically clear descriptive increase occurs between 2010 and 2016, and the 2022-23 profile remains more persistent than the 2010 baseline without clearly exceeding the 2016 peak once uncertainty is shown.
+@tbl-mobility-metrics and @fig-rank-rank and @fig-directional-rates tell the same high-level story: educational persistence is substantial in every wave, the statistically clear descriptive increase occurs between 2010 and 2016, and the 2022-23 profile remains more persistent than the 2010 baseline without clearly exceeding the 2016 peak once uncertainty is shown.
 
 ![Rank-rank slope by LiTS wave.](../outputs/figures/tier_a_rank_rank_by_wave.png){#fig-rank-rank fig-alt="Rank-rank slope by LiTS wave."}
 
@@ -456,7 +455,7 @@ Table @tbl-mobility-metrics and Figures @fig-rank-rank and @fig-directional-rate
 
 ### Transition Structure
 
-The by-wave rates are easier to interpret alongside the transition structure in Table @tbl-transition-structure. In both 2010 and 2016, respondents from lower-secondary and primary parental origins most often reach upper secondary, while respondents from upper-secondary parental origins remain concentrated in the same category. The pattern fits a system that permits some upward movement from lower origins but still exhibits strong persistence around the upper-secondary category that dominates the analytical sample.
+The by-wave rates are easier to interpret alongside the transition structure in @tbl-transition-structure. In both 2010 and 2016, respondents from lower-secondary and primary parental origins most often reach upper secondary, while respondents from upper-secondary parental origins remain concentrated in the same category. The pattern fits a system that permits some upward movement from lower origins but still exhibits strong persistence around the upper-secondary category that dominates the analytical sample.
 
 The 2022-23 transition matrix remains thin at the lowest parental origins, but it is no longer confined to a single usable row. The tertiary parental-origin row shows `r fmt_pct(transition_summary$share[transition_summary$wave_year == 2022 & transition_summary$parent_ed_level == "tertiary" & transition_summary$own_ed_level == "tertiary"])` same-category persistence out of `r fmt_int(transition_summary$n_parent_total[transition_summary$wave_year == 2022 & transition_summary$parent_ed_level == "tertiary" & transition_summary$own_ed_level == "tertiary"])` valid cases, while the upper-secondary parental-origin row shows `r fmt_pct(transition_summary$share[transition_summary$wave_year == 2022 & transition_summary$parent_ed_level == "upper_secondary" & transition_summary$own_ed_level == "tertiary"])` movement into tertiary and `r fmt_pct(transition_summary$share[transition_summary$wave_year == 2022 & transition_summary$parent_ed_level == "upper_secondary" & transition_summary$own_ed_level == "upper_secondary"])` same-category persistence out of `r fmt_int(transition_summary$n_parent_total[transition_summary$wave_year == 2022 & transition_summary$parent_ed_level == "upper_secondary" & transition_summary$own_ed_level == "upper_secondary"])` valid cases. The transition evidence reinforces strong persistence at the top of the ladder; lower-origin 2022 rows remain too sparse for fine-grained inference.
 
@@ -516,7 +515,7 @@ Notes: Entries are weighted shares within each parental-origin row. Rows with fe
 
 #### Cohort Profiles
 
-Figure @fig-cohort-rank-rank shows that the rank-based persistence gradient differs across cohorts, even though all cohort profiles remain positive. The youngest adult cohort moves from a slope of **`r fmt_num(subgroup_trends$estimate[subgroup_trends$subgroup_type == "cohort" & subgroup_trends$subgroup_value == "25-34" & subgroup_trends$metric == "rank_rank_slope" & subgroup_trends$wave_year == 2010])`** in 2010 to **`r fmt_num(subgroup_trends$estimate[subgroup_trends$subgroup_type == "cohort" & subgroup_trends$subgroup_value == "25-34" & subgroup_trends$metric == "rank_rank_slope" & subgroup_trends$wave_year == 2022])`** in 2022-23, while the oldest cohort stays closer to one quarter throughout the period. These are descriptive cross-cohort differences rather than cohort effects identified from a panel.
+@fig-cohort-rank-rank shows that the rank-based persistence gradient differs across cohorts, even though all cohort profiles remain positive. The youngest adult cohort moves from a slope of **`r fmt_num(subgroup_trends$estimate[subgroup_trends$subgroup_type == "cohort" & subgroup_trends$subgroup_value == "25-34" & subgroup_trends$metric == "rank_rank_slope" & subgroup_trends$wave_year == 2010])`** in 2010 to **`r fmt_num(subgroup_trends$estimate[subgroup_trends$subgroup_type == "cohort" & subgroup_trends$subgroup_value == "25-34" & subgroup_trends$metric == "rank_rank_slope" & subgroup_trends$wave_year == 2022])`** in 2022-23, while the oldest cohort stays closer to one quarter throughout the period. These are descriptive cross-cohort differences rather than cohort effects identified from a panel.
 
 ```{r}
 #| label: fig-cohort-rank-rank
@@ -557,7 +556,7 @@ Cohort profiles are heterogeneous in levels, but they do not overturn the broade
 
 #### Regional Variation
 
-Regional dispersion is clearest in the rank-based measure, because the 2022 category-based regional outputs remain sparse for many origin cells. Figure @fig-region-rank-rank ranks the 2022-23 regional slopes and shows a wide descriptive spread around the national slope of **`r fmt_num(metric_est("rank_rank_slope", 2022))`**. The highest observed persistence appears in Tashkent city at **`r fmt_num(region_trends$estimate[region_trends$region == "Tashkent city" & region_trends$wave_year == 2022 & region_trends$metric == "rank_rank_slope"])`**, while Khorezm region sits near **`r fmt_num(region_trends$estimate[region_trends$region == "Khorezm region" & region_trends$wave_year == 2022 & region_trends$metric == "rank_rank_slope"])`**. These regional differences are descriptive and several intervals remain wide; they indicate dispersion rather than ranked certainty.
+Regional dispersion is clearest in the rank-based measure, because the 2022 category-based regional outputs remain sparse for many origin cells. @fig-region-rank-rank ranks the 2022-23 regional slopes and shows a wide descriptive spread around the national slope of **`r fmt_num(metric_est("rank_rank_slope", 2022))`**. The highest observed persistence appears in Tashkent city at **`r fmt_num(region_trends$estimate[region_trends$region == "Tashkent city" & region_trends$wave_year == 2022 & region_trends$metric == "rank_rank_slope"])`**, while Khorezm region sits near **`r fmt_num(region_trends$estimate[region_trends$region == "Khorezm region" & region_trends$wave_year == 2022 & region_trends$metric == "rank_rank_slope"])`**. These regional differences are descriptive and several intervals remain wide; they indicate dispersion rather than ranked certainty.
 
 ```{r}
 #| label: fig-region-rank-rank
@@ -594,7 +593,7 @@ Regional differences are large enough to matter for interpretation, even though 
 
 #### Subgroup Split
 
-Figure @fig-upward-urban-rural reports the urban-rural split in category-coded upward mobility. This comparison connects directly to the pooled correlates framework, though it uses the category-based rate rather than the rank-based trend benchmark and remains descriptive.
+@fig-upward-urban-rural reports the urban-rural split in category-coded upward mobility. This comparison connects directly to the pooled correlates framework, though it uses the category-based rate rather than the rank-based trend benchmark and remains descriptive.
 
 The companion gender split is not promoted to the main text because the 2022-23 male category-mobility sample is only `r fmt_int(subgroup_metrics$n[subgroup_metrics$subgroup_type == "gender" & subgroup_metrics$subgroup_value == "male" & subgroup_metrics$metric == "upward_mobility_rate" & subgroup_metrics$wave_year == 2022])` with a weighted effective N of about `r fmt_num(subgroup_metrics$effective_n[subgroup_metrics$subgroup_type == "gender" & subgroup_metrics$subgroup_value == "male" & subgroup_metrics$metric == "upward_mobility_rate" & subgroup_metrics$wave_year == 2022], digits = 1)`, which makes that panel less informative than the urban-rural comparison.
 
@@ -608,7 +607,7 @@ Subgroup descriptives are useful for orientation, but the rank-based national se
 
 The pooled rank-based persistence models keep the same fixed-effects structure and vary only in how much additional adjustment is imposed. Across the three nested specifications, the implied conditional 2010 parent-child slope ranges from `r fmt_num(module_b_profile_value("minimal", 2010))` to `r fmt_num(module_b_profile_value("extended", 2010))`, the 2016 slope ranges from `r fmt_num(module_b_profile_value("minimal", 2016))` to `r fmt_num(module_b_profile_value("extended", 2016))`, and the 2022-23 slope ranges from `r fmt_num(module_b_profile_value("minimal", 2022))` to `r fmt_num(module_b_profile_value("extended", 2022))`. The substantive picture is stable across specifications: the conditional association is strongest in 2016, and the 2022-23 gradient is closer to 2016 than to a full reversal back to 2010.
 
-The formal conditional tests mirror the descriptive ones, and the few-cluster sensitivity leaves the main ranking intact. Table @tbl-wave-diff-tests reports the wave-difference estimates, conventional region-clustered p-values, and Webb wild-cluster-bootstrap p-values across all three specifications. The 2010-to-2016 slope increase is positive and statistically distinguishable in every specification; the 2016-to-2022 difference is negative but imprecise throughout. At best, the 2010-to-2022 contrast is suggestive in the minimal model and imprecise once demographic or extended controls are added. The pooled evidence therefore supports persistence and a mid-period strengthening more clearly than a monotonic worsening in every later wave.
+The formal conditional tests mirror the descriptive ones, and the few-cluster sensitivity leaves the main ranking intact. @tbl-wave-diff-tests reports the wave-difference estimates, conventional region-clustered p-values, and Webb wild-cluster-bootstrap p-values across all three specifications. The 2010-to-2016 slope increase is positive and statistically distinguishable in every specification; the 2016-to-2022 difference is negative but imprecise throughout. At best, the 2010-to-2022 contrast is suggestive in the minimal model and imprecise once demographic or extended controls are added. The pooled evidence therefore supports persistence and a mid-period strengthening more clearly than a monotonic worsening in every later wave.
 
 ```{r}
 #| label: tbl-wave-diff-tests
@@ -666,7 +665,7 @@ The upward-mobility linear probability models show that upward transitions are m
 
 ### Heterogeneity in Persistence
 
-The same-category persistence models show a positive association between parental education score and remaining in the same category, but interaction patterns are more specification-dependent than the core rank-based results. The positive 2022 interaction in these category-based models does not overturn the rank-based reading: the strongest evidence remains a 2010-to-2016 strengthening rather than a step-up in every later wave. Table @tbl-pooled-correlates summarizes the main nested parental coefficients.
+The same-category persistence models show a positive association between parental education score and remaining in the same category, but interaction patterns are more specification-dependent than the core rank-based results. The positive 2022 interaction in these category-based models does not overturn the rank-based reading: the strongest evidence remains a 2010-to-2016 strengthening rather than a step-up in every later wave. @tbl-pooled-correlates summarizes the main nested parental coefficients.
 
 ```{r}
 #| label: tbl-pooled-correlates
@@ -724,7 +723,7 @@ Notes: All specifications include region, cohort, and wave fixed effects. Standa
 
 ### Household Support Environment from HBS
 
-Table @tbl-hbs-context reports supplementary HBS evidence that is used here only to characterize the household support environment around schooling, not to replace the core LiTS intergenerational estimates. Across pooled HBS 2021-2025 households, `r fmt_pct(hbs_context_value("has_enrolled_member"))` had an enrolled member, `r fmt_pct(hbs_context_value("education_spending_positive"))` reported positive education spending, `r fmt_pct(hbs_context_value("has_tutoring"))` reported tutoring, `r fmt_pct(hbs_context_value("has_emigrant_hh"))` had an emigrant member, and `r fmt_pct(hbs_context_value("has_remittance_hh"))` received remittances; internet access is observed for `r fmt_pct(hbs_context_value("internet_access_hh"))` of households in the 2021-2024 internet module. These patterns provide context for interpretation by showing that schooling support, migration-linked resources, and connectivity constraints sit inside the same household environment as the LiTS persistence patterns. A separate companion note extends the same HBS layer descriptively across years, urban-rural settings, regions, and high-versus-low expansion groupings without introducing HBS mobility estimates.
+@tbl-hbs-context reports supplementary HBS evidence that is used here only to characterize the household support environment around schooling, not to replace the core LiTS intergenerational estimates. Across pooled HBS 2021-2025 households, `r fmt_pct(hbs_context_value("has_enrolled_member"))` had an enrolled member, `r fmt_pct(hbs_context_value("education_spending_positive"))` reported positive education spending, `r fmt_pct(hbs_context_value("has_tutoring"))` reported tutoring, `r fmt_pct(hbs_context_value("has_emigrant_hh"))` had an emigrant member, and `r fmt_pct(hbs_context_value("has_remittance_hh"))` received remittances; internet access is observed for `r fmt_pct(hbs_context_value("internet_access_hh"))` of households in the 2021-2024 internet module. These patterns provide context for interpretation by showing that schooling support, migration-linked resources, and connectivity constraints sit inside the same household environment as the LiTS persistence patterns. A separate companion note extends the same HBS layer descriptively across years, urban-rural settings, regions, and high-versus-low expansion groupings without introducing HBS mobility estimates.
 
 The HBS linkage diagnostics in Appendix H also show why HBS remains supplementary. Under a conservative co-resident linkage rule, only `r fmt_pct(hbs_linkage_diagnostics$link_rate[1])` of HBS adults ages 25-64 are linkable, and that linked sample is materially younger and much less female than the full adult sample. HBS informs the household support environment but is not a direct substitute for the headline LiTS intergenerational estimates.
 
@@ -746,7 +745,7 @@ Notes: Estimates are descriptive pooled household shares from HBS 2021-2025, exc
 
 ### Household Support by University-Expansion Intensity
 
-The post-2017 higher-education expansion was not uniform across regions. Using an administrative panel of university admissions rates, HEI counts, and total enrollment per 1,000 youth aged 20-24 by region and academic year, regions are grouped into high-expansion and low-expansion categories based on the composite expansion index. Table @tbl-hbs-expansion reports the same household support indicators split by this grouping.
+The post-2017 higher-education expansion was not uniform across regions. Using an administrative panel of university admissions rates, HEI counts, and total enrollment per 1,000 youth aged 20-24 by region and academic year, regions are grouped into high-expansion and low-expansion categories based on the composite expansion index. @tbl-hbs-expansion reports the same household support indicators split by this grouping.
 
 ```{r}
 #| label: tbl-hbs-expansion
@@ -778,7 +777,7 @@ The descriptive pattern is that most household support indicators are similar ac
 
 ### Sample and Disruption Profile
 
-The child-module extension is deliberately kept secondary to Modules A and B. It is based on `r sample_n("^Mechanism sample with non-missing parental schooling$")` respondents with a child enrolled before COVID and non-missing parental schooling. Table @tbl-modulec-sample reports the sample flow.
+The child-module extension is deliberately kept secondary to Modules A and B. It is based on `r sample_n("^Mechanism sample with non-missing parental schooling$")` respondents with a child enrolled before COVID and non-missing parental schooling. @tbl-modulec-sample reports the sample flow.
 
 Within this restricted sample, disruption and household substitution were substantial: **`r fmt_pct(mech_est("education_stopped_covid"))`** report education stoppage during COVID, **`r fmt_pct(mech_est("any_remote_challenge"))`** report at least one remote-learning challenge, and mothers are reported as the learning-support channel in **`r fmt_pct(mech_est("support_mother"))`** of cases. Additional descriptive splits and the fragility checks for the mechanism regressions are reported in the technical appendix so that the main text remains focused on the strongest facts.
 
@@ -802,7 +801,7 @@ Notes: The flow is limited to Uzbekistan LiTS IV respondents with a child enroll
 
 The main-text conclusion is descriptive. Under the baseline weighted median split, stoppage rates are nearly identical: **`r fmt_pct(mech_est("education_stopped_covid", "parent_education", "lower_or_equal_median_parent_edu"))`** among children from lower-parent-education households versus **`r fmt_pct(mech_est("education_stopped_covid", "parent_education", "above_median_parent_edu"))`** among those from higher-parent-education households. Together with the high overall disruption rates, this supports a practical reading centered on widespread household learning constraints rather than a precise adjusted parent-gap effect.
 
-Appendix fragility diagnostics explain why adjusted split-based coefficients are not used as headline evidence. Under the strict `<=9` split, the low-parent-education group falls to **`r fmt_int(robust_scenario_value("weighted_leq9", "n_low_group"))`** observations (vs **`r fmt_int(robust_scenario_value("weighted_leq9", "n_high_group"))`** in the comparison group), yielding a degenerate-support scenario (`r robust_scenario_value("weighted_leq9", "scenario_status")`). Under the weighted median split with the project-wide max-parent proxy, the higher-parent group falls to **`r fmt_int(robust_scenario_value("weighted_median_maxparent", "n_high_group"))`** observations. Module C contributes suggestive descriptive evidence on household vulnerability and learning support — not a stable adjusted parental-education gradient and not causal evidence on pandemic mechanisms.
+Appendix fragility diagnostics explain why adjusted split-based coefficients are not used as headline evidence. Under the strict $\leq 9$ split, the low-parent-education group falls to **`r fmt_int(robust_scenario_value("weighted_leq9", "n_low_group"))`** observations (vs **`r fmt_int(robust_scenario_value("weighted_leq9", "n_high_group"))`** in the comparison group), yielding a degenerate-support scenario (`r robust_scenario_value("weighted_leq9", "scenario_status")`). Under the weighted median split with the project-wide max-parent proxy, the higher-parent group falls to **`r fmt_int(robust_scenario_value("weighted_median_maxparent", "n_high_group"))`** observations. Module C contributes suggestive descriptive evidence on household vulnerability and learning support — not a stable adjusted parental-education gradient and not causal evidence on pandemic mechanisms.
 
 ## Discussion and Conclusion
 
@@ -819,3 +818,5 @@ As noted in the Introduction, the Uzbekistan slopes fall in the moderate-to-high
 These findings point to three policy priorities. First, reducing the dependence of educational attainment on parental background: earlier remedial support, stronger transitions across schooling stages, and wider access to quality secondary and post-secondary pathways. Second, addressing spatial and household bottlenecks directly: local infrastructure, service access, and household support conditions appear to constrain mobility even where formal access has expanded. Third, strengthening household support capacity during disruptions. The child module shows that digital inclusion involves connection quality, device availability, and adults' ability to help children learn, not only nominal internet access. Education policy that treats home-based adjustment as costless to households underestimates the burden that mothers absorb.
 
 Future work could strengthen these findings through panel data that tracks families over time, administrative education records that avoid retrospective reporting error, or quasi-experimental evaluation of specific reforms in the post-2017 expansion cycle.
+
+\newpage

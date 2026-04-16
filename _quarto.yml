@@ -33,9 +33,6 @@ format:
     keep-tex: false
     include-in-header:
       text: |
-        \usepackage{setspace}
-        \usepackage{booktabs}
-        \usepackage{float}
         \usepackage{pdflscape}
         \renewcommand{\abstractname}{}
   docx:
