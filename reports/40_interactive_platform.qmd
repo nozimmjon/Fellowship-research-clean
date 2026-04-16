@@ -1,0 +1,1074 @@
+---
+title: "Interactive Research Platform"
+subtitle: "Uzbekistan Intergenerational Mobility Project"
+author: "Research Team"
+date: today
+format:
+  html:
+    toc: false
+    number-sections: false
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+read_csv_safe <- function(path) {
+  if (!file.exists(path)) {
+    return(data.frame())
+  }
+  tryCatch(
+    utils::read.csv(path, stringsAsFactors = FALSE),
+    error = function(e) data.frame()
+  )
+}
+
+project_file <- function(...) file.path("..", ...)
+
+count_char <- function(x, pattern) {
+  m <- gregexpr(pattern, x, fixed = TRUE)[[1]]
+  if (length(m) == 1L && m[1] == -1L) 0L else length(m)
+}
+
+clean_bib_value <- function(x) {
+  x <- trimws(x)
+  if (nchar(x) >= 2) {
+    first <- substr(x, 1, 1)
+    last <- substr(x, nchar(x), nchar(x))
+    if ((first == "{" && last == "}") || (first == "\"" && last == "\"")) {
+      x <- substr(x, 2, nchar(x) - 1)
+    }
+  }
+  x <- gsub("\\\\&", "&", x)
+  x <- gsub("[{}]", "", x)
+  x <- gsub("\\s+", " ", x)
+  trimws(x)
+}
+
+parse_bib_simple <- function(path) {
+  if (!file.exists(path)) {
+    return(data.frame())
+  }
+  lines <- readLines(path, warn = FALSE, encoding = "UTF-8")
+  if (!length(lines)) {
+    return(data.frame())
+  }
+
+  entries <- list()
+  current <- character()
+  for (ln in lines) {
+    if (grepl("^\\s*@", ln) && length(current) > 0) {
+      entries[[length(entries) + 1L]] <- current
+      current <- c(ln)
+    } else {
+      current <- c(current, ln)
+    }
+  }
+  if (length(current) > 0) {
+    entries[[length(entries) + 1L]] <- current
+  }
+
+  parsed <- lapply(entries, function(e_lines) {
+    header <- trimws(e_lines[1])
+    hm <- regexec("^@([A-Za-z]+)\\s*\\{\\s*([^,]+)\\s*,?", header, perl = TRUE)
+    hr <- regmatches(header, hm)[[1]]
+    if (length(hr) < 3) {
+      return(NULL)
+    }
+    entry_type <- tolower(hr[2])
+    key <- hr[3]
+
+    fields <- list()
+    current_name <- NULL
+    current_val <- ""
+    depth <- 0L
+
+    for (ln in e_lines[-1]) {
+      line <- trimws(ln)
+      if (!nzchar(line)) {
+        next
+      }
+      if (is.null(current_name)) {
+        fm <- regexec("^([A-Za-z][A-Za-z0-9_-]*)\\s*=\\s*(.*)$", line, perl = TRUE)
+        fr <- regmatches(line, fm)[[1]]
+        if (length(fr) >= 3) {
+          current_name <- tolower(fr[2])
+          current_val <- fr[3]
+          depth <- count_char(current_val, "{") - count_char(current_val, "}")
+          if (depth <= 0L && grepl(",\\s*$", current_val)) {
+            fields[[current_name]] <- clean_bib_value(sub(",\\s*$", "", current_val))
+            current_name <- NULL
+            current_val <- ""
+            depth <- 0L
+          }
+        }
+      } else {
+        current_val <- paste(current_val, line, sep = " ")
+        depth <- depth + count_char(line, "{") - count_char(line, "}")
+        if (depth <= 0L && grepl(",\\s*$", line)) {
+          fields[[current_name]] <- clean_bib_value(sub(",\\s*$", "", current_val))
+          current_name <- NULL
+          current_val <- ""
+          depth <- 0L
+        }
+      }
+    }
+    if (!is.null(current_name) && nzchar(current_val)) {
+      fields[[current_name]] <- clean_bib_value(sub(",\\s*$", "", current_val))
+    }
+
+    get_field <- function(name) {
+      if (is.null(fields[[name]])) NA_character_ else fields[[name]]
+    }
+
+    data.frame(
+      key = key,
+      entry_type = entry_type,
+      author = get_field("author"),
+      title = get_field("title"),
+      year = get_field("year"),
+      journal = get_field("journal"),
+      booktitle = get_field("booktitle"),
+      institution = get_field("institution"),
+      doi = get_field("doi"),
+      url = get_field("url"),
+      stringsAsFactors = FALSE
+    )
+  })
+
+  parsed <- parsed[!vapply(parsed, is.null, logical(1))]
+  if (!length(parsed)) {
+    return(data.frame())
+  }
+  out <- do.call(rbind, parsed)
+  out$year_num <- suppressWarnings(as.numeric(out$year))
+  out <- out[order(out$year_num, out$key, decreasing = TRUE, na.last = TRUE), ]
+  out$year_num <- NULL
+  rownames(out) <- NULL
+  out
+}
+
+platform_payload <- list(
+  sample_by_wave = read_csv_safe(project_file("outputs", "tables", "tier_a_sample_by_wave.csv")),
+  module_a_summary = read_csv_safe(project_file("outputs", "tables", "module_a_summary_metrics.csv")),
+  module_b_key = read_csv_safe(project_file("outputs", "tables", "module_b_key_coefficient_comparison.csv")),
+  model_inventory = read_csv_safe(project_file("outputs", "tables", "empirical_model_inventory.csv")),
+  module_b_formulae = read_csv_safe(project_file("outputs", "tables", "module_b_formulae.csv")),
+  module_b_specifications = read_csv_safe(project_file("outputs", "tables", "module_b_specifications.csv")),
+  module_b_wave_tests = read_csv_safe(project_file("outputs", "tables", "module_b_wave_difference_tests.csv")),
+  module_b_covariates = read_csv_safe(project_file("outputs", "tables", "module_b_covariate_classification.csv")),
+  parent_missingness = read_csv_safe(project_file("outputs", "tables", "empirical_parent_missingness_by_wave.csv")),
+  module_c_summary = read_csv_safe(project_file("outputs", "tables", "module_c_mechanism_summary.csv")),
+  module_c_formulae = read_csv_safe(project_file("outputs", "tables", "module_c_mechanism_formulae.csv")),
+  module_c_sample = read_csv_safe(project_file("outputs", "tables", "module_c_mechanism_sample.csv")),
+  module_c_scenarios = read_csv_safe(project_file("outputs", "tables", "module_c_mechanism_robustness_scenarios.csv")),
+  module_c_robust = read_csv_safe(project_file("outputs", "tables", "module_c_mechanism_robustness_coefficients.csv")),
+  claim_audit = read_csv_safe(project_file("outputs", "tables", "empirical_claim_audit.csv")),
+  sample_flow = read_csv_safe(project_file("outputs", "tables", "empirical_sample_flow.csv")),
+  hbs_context = read_csv_safe(project_file("outputs", "tables", "hbs_household_support_context.csv")),
+  literature = parse_bib_simple(project_file("references.bib"))
+)
+```
+
+```{r results='asis'}
+if (!requireNamespace("jsonlite", quietly = TRUE)) {
+  stop("The jsonlite package is required to render this platform page.")
+}
+
+json_payload <- jsonlite::toJSON(
+  platform_payload,
+  dataframe = "rows",
+  auto_unbox = TRUE,
+  na = "null",
+  digits = 10
+)
+
+cat('<script id="platform-data" type="application/json">')
+cat(json_payload)
+cat('</script>')
+```
+
+<style>
+.platform-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.hero {
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  background: linear-gradient(120deg, #0d3b66 0%, #125a8a 45%, #1f7a8c 100%);
+  color: #fff;
+  margin-bottom: 1rem;
+}
+.hero a { color: #fff; font-weight: 700; text-decoration: underline; }
+.muted { opacity: 0.9; }
+.section-card {
+  border: 1px solid #d9e0e7;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: #fff;
+}
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+.kpi-card {
+  border: 1px solid #e3e7ed;
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: #f8fafc;
+}
+.kpi-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #0d3b66;
+}
+.inline-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+select {
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  padding: 0.25rem 0.45rem;
+  background: #fff;
+}
+.chart-wrap {
+  border: 1px solid #e1e7ee;
+  border-radius: 10px;
+  padding: 0.5rem;
+  background: #fcfdff;
+}
+table.platform-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.65rem;
+  font-size: 0.94rem;
+}
+table.platform-table th, table.platform-table td {
+  border: 1px solid #e3e8ef;
+  padding: 0.4rem 0.45rem;
+  text-align: left;
+}
+table.platform-table th { background: #f3f6fa; }
+.status-chip {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.status-ok { background: #e9f8ef; color: #126a35; }
+.status-caution { background: #fff2df; color: #995f00; }
+.status-needs_review, .status-fail { background: #ffe7e7; color: #8a1f1f; }
+.flow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 0.75rem;
+}
+.flow-step {
+  border: 1px solid #d7dee8;
+  border-radius: 10px;
+  padding: 0.65rem;
+  background: #f9fbfe;
+}
+.qa-input {
+  width: 100%;
+  border: 1px solid #cfd8e3;
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
+  min-height: 90px;
+  resize: vertical;
+}
+.qa-toolbar {
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+.qa-btn {
+  border: 1px solid #0d3b66;
+  background: #0d3b66;
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.3rem 0.7rem;
+  font-weight: 600;
+}
+.qa-btn.ghost {
+  background: #fff;
+  color: #0d3b66;
+}
+.qa-suggestion {
+  border: 1px solid #c8d5e4;
+  background: #f4f8fc;
+  color: #1a3f63;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.85rem;
+}
+.qa-answer {
+  border: 1px solid #dbe4ee;
+  background: #fcfdff;
+  border-radius: 10px;
+  padding: 0.8rem;
+  margin-top: 0.7rem;
+}
+.qa-answer h4 {
+  margin-top: 0.4rem;
+  margin-bottom: 0.35rem;
+}
+.qa-answer ul {
+  margin-bottom: 0.55rem;
+}
+.qa-muted {
+  color: #4c5e72;
+  font-size: 0.9rem;
+}
+</style>
+
+```{=html}
+<div class="platform-wrap">
+  <div class="hero">
+    <h2>Interactive Understanding Platform</h2>
+    <p class="muted">Use this page to explore the full project: pipeline structure, module evidence, robustness diagnostics, and audit checks. All values are loaded from the current repository outputs.</p>
+    <p>
+      Companion docs:
+      <a href="00_main.html">Main Paper</a> |
+      <a href="10_technical_appendix.html">Technical Appendix</a> |
+      <a href="05_process_guide.html">Process Guide</a> |
+      <a href="06_process_flowchart.html">Flowchart</a>
+    </p>
+  </div>
+
+  <div class="section-card">
+    <h3>Project Snapshot</h3>
+    <div id="wave-cards" class="card-grid"></div>
+  </div>
+
+  <div class="section-card">
+    <h3>Pipeline Explorer</h3>
+    <div class="flow-grid">
+      <div class="flow-step"><strong>1. Ingest and Harmonize</strong><br><code>R/20_ingest_data.R</code><br>Creates harmonized LiTS data.</div>
+      <div class="flow-step"><strong>2. Module A</strong><br><code>R/30_module_a_mobility.R</code><br>Descriptive mobility metrics and transitions.</div>
+      <div class="flow-step"><strong>3. Module B</strong><br><code>R/40_module_b_determinants.R</code><br>Pooled associational fixed-effects models.</div>
+      <div class="flow-step"><strong>4. Module C</strong><br><code>R/50_module_c_mechanisms.R</code><br>Bounded 2022-23 child-module extension.</div>
+      <div class="flow-step"><strong>5. Empirical Audit</strong><br><code>R/60_empirical_audit.R</code><br>Claim checks, inclusion flow, robustness diagnostics.</div>
+      <div class="flow-step"><strong>6. Reporting</strong><br><code>reports/*.qmd</code><br>Publication pages consume saved outputs.</div>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <h3>Module A Evidence Explorer</h3>
+    <div class="inline-controls">
+      <label for="metric-select"><strong>Metric:</strong></label>
+      <select id="metric-select">
+        <option value="rank_rank_slope">Rank-rank slope</option>
+        <option value="upward_mobility_rate">Upward mobility rate</option>
+        <option value="downward_mobility_rate">Downward mobility rate</option>
+        <option value="persistence_probability">Persistence probability</option>
+      </select>
+    </div>
+    <div id="metric-chart" class="chart-wrap"></div>
+    <div id="metric-summary"></div>
+    <table id="metric-table" class="platform-table"></table>
+  </div>
+
+  <div class="section-card">
+    <h3>Module B Model Explorer</h3>
+    <div class="inline-controls">
+      <label for="family-select"><strong>Model family:</strong></label>
+      <select id="family-select"></select>
+      <label for="spec-select"><strong>Specification:</strong></label>
+      <select id="spec-select"></select>
+    </div>
+    <table id="moduleb-table" class="platform-table"></table>
+    <h4>Wave-Difference Tests</h4>
+    <table id="moduleb-wave-table" class="platform-table"></table>
+  </div>
+
+  <div class="section-card">
+    <h3>Module C Scenario Explorer</h3>
+    <div class="inline-controls">
+      <label for="scenario-select"><strong>Robustness scenario:</strong></label>
+      <select id="scenario-select"></select>
+    </div>
+    <div id="scenario-meta"></div>
+    <h4>Parent-Education Effect Diagnostics</h4>
+    <table id="modulec-table" class="platform-table"></table>
+    <h4>Key Descriptive Rates</h4>
+    <table id="modulec-summary-table" class="platform-table"></table>
+  </div>
+
+  <div class="section-card">
+    <h3>Audit and Integrity Checks</h3>
+    <div class="inline-controls">
+      <label for="audit-filter"><strong>Status filter:</strong></label>
+      <select id="audit-filter">
+        <option value="all">All</option>
+        <option value="ok">ok</option>
+        <option value="caution">caution</option>
+        <option value="needs_review">needs_review</option>
+        <option value="fail">fail</option>
+      </select>
+    </div>
+    <div id="audit-counts"></div>
+    <table id="audit-table" class="platform-table"></table>
+  </div>
+
+  <div class="section-card">
+    <h3>Sample Flow</h3>
+    <table id="sample-flow-table" class="platform-table"></table>
+  </div>
+
+  <div class="section-card">
+    <h3>Research Q&A Assistant</h3>
+    <p class="qa-muted">Ask project-grounded questions about models, data, and relevant literature. Answers are generated only from this repository's outputs and bibliography.</p>
+    <div class="inline-controls">
+      <label for="qa-domain"><strong>Focus:</strong></label>
+      <select id="qa-domain">
+        <option value="auto">Auto-detect</option>
+        <option value="models">Models</option>
+        <option value="data">Data</option>
+        <option value="literature">Literature</option>
+      </select>
+    </div>
+    <textarea id="qa-input" class="qa-input" placeholder="Example: Which model estimates persistence changes across waves, and what is the sample size?"></textarea>
+    <div class="qa-toolbar">
+      <button id="qa-ask" class="qa-btn" type="button">Ask</button>
+      <button id="qa-clear" class="qa-btn ghost" type="button">Clear</button>
+      <button class="qa-suggestion" type="button" data-question="Which model tests intergenerational persistence changes across 2010, 2016, and 2022-23?">Persistence model</button>
+      <button class="qa-suggestion" type="button" data-question="What are the main sample sizes by wave and for Module C?">Sample sizes</button>
+      <button class="qa-suggestion" type="button" data-question="Which references are most relevant for intergenerational educational mobility in developing contexts?">Key literature</button>
+    </div>
+    <div id="qa-answer" class="qa-answer">
+      <p>Type a question and click <strong>Ask</strong>.</p>
+    </div>
+  </div>
+</div>
+```
+
+<script>
+(() => {
+  const payload = JSON.parse(document.getElementById("platform-data").textContent || "{}");
+
+  const asArray = (x) => Array.isArray(x) ? x : [];
+  const toNum = (x) => {
+    const n = Number(x);
+    return Number.isFinite(n) ? n : null;
+  };
+  const waveLabel = (y) => Number(y) === 2022 ? "2022-23" : String(y);
+  const fmtNum = (x, d = 3) => toNum(x) === null ? "-" : toNum(x).toFixed(d);
+  const fmtPct = (x, d = 1) => toNum(x) === null ? "-" : (100 * toNum(x)).toFixed(d) + "%";
+  const fmtInt = (x) => toNum(x) === null ? "-" : Math.round(toNum(x)).toLocaleString("en-US");
+  const fmtP = (x) => {
+    const v = toNum(x);
+    if (v === null) return "-";
+    if (v < 0.001) return "<0.001";
+    return v.toFixed(3);
+  };
+
+  const metricLabels = {
+    rank_rank_slope: "Rank-rank slope",
+    upward_mobility_rate: "Upward mobility rate",
+    downward_mobility_rate: "Downward mobility rate",
+    persistence_probability: "Persistence probability"
+  };
+
+  const familyLabels = {
+    eq2_persistence_trend: "Eq. 2 persistence trend",
+    eq3_attainment_score: "Eq. 3 attainment score",
+    eq5_persistence_heterogeneity: "Eq. 5 persistence heterogeneity"
+  };
+
+  const scenarioLabels = {
+    baseline_weighted_median: "Weighted median split",
+    unweighted_median: "Unweighted median split",
+    weighted_leq11: "Weighted <=11 years split",
+    weighted_leq9: "Weighted <=9 years split",
+    weighted_median_maxparent: "Weighted median split (max-parent)"
+  };
+
+  const moduleASummary = asArray(payload.module_a_summary);
+  const sampleByWave = asArray(payload.sample_by_wave);
+  const moduleBKey = asArray(payload.module_b_key);
+  const modelInventory = asArray(payload.model_inventory);
+  const moduleBFormulae = asArray(payload.module_b_formulae);
+  const moduleBSpecs = asArray(payload.module_b_specifications);
+  const moduleBWave = asArray(payload.module_b_wave_tests);
+  const parentMissingness = asArray(payload.parent_missingness);
+  const moduleCSummary = asArray(payload.module_c_summary);
+  const moduleCFormulae = asArray(payload.module_c_formulae);
+  const moduleCScenarios = asArray(payload.module_c_scenarios);
+  const moduleCRobust = asArray(payload.module_c_robust);
+  const claimAudit = asArray(payload.claim_audit);
+  const sampleFlow = asArray(payload.sample_flow);
+  const literature = asArray(payload.literature);
+
+  const stopwords = new Set([
+    "the", "and", "for", "with", "from", "that", "this", "what", "which", "when",
+    "where", "how", "why", "are", "was", "were", "is", "it", "into", "about",
+    "across", "between", "than", "then", "have", "has", "had", "can", "could",
+    "would", "should", "they", "their", "them", "our", "your", "you", "show",
+    "tell", "give", "explain", "project", "research"
+  ]);
+
+  const esc = (x) => String(x ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+
+  const norm = (x) => String(x || "").toLowerCase();
+
+  const tokenize = (x) => norm(x)
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(" ")
+    .map((t) => t.trim())
+    .filter((t) => t.length > 1 && !stopwords.has(t));
+
+  const scoreText = (text, tokens) => {
+    const t = norm(text);
+    return tokens.reduce((acc, tok) => acc + (t.includes(tok) ? 1 : 0), 0);
+  };
+
+  function topMatches(rows, textFn, tokens, limit = 5) {
+    if (!rows.length) return [];
+    const ranked = rows.map((r) => ({
+      row: r,
+      score: scoreText(textFn(r), tokens)
+    }));
+    const selected = ranked
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map((x) => x.row);
+    if (selected.length) return selected;
+    return rows.slice(0, Math.min(limit, rows.length));
+  }
+
+  function detectDomains(query, forced) {
+    if (forced && forced !== "auto") return [forced];
+    const q = norm(query);
+    const domains = [];
+    if (/(model|equation|eq\.?|formula|specification|regression|coefficient|estimator|fixed effect|feols|logit|lpm|module b|module c|did|event study|causal)/.test(q)) {
+      domains.push("models");
+    }
+    if (/(data|dataset|sample|n\b|missing|coverage|respondent|wave|flow|weights|observed|lits)/.test(q)) {
+      domains.push("data");
+    }
+    if (/(literature|reference|citation|paper|study|author|journal|doi|evidence|world bank|unicef)/.test(q)) {
+      domains.push("literature");
+    }
+    if (!domains.length) return ["models", "data", "literature"];
+    return [...new Set(domains)];
+  }
+
+  function answerModels(query, tokens) {
+    const specMap = Object.fromEntries(moduleBSpecs.map((r) => [r.specification, r.specification_label]));
+    const matchedModels = topMatches(
+      modelInventory,
+      (r) => `${r.module} ${r.model} ${r.model_family} ${r.specification} ${r.outcome} ${r.estimator} ${r.formula} ${r.interaction_structure} ${r.fixed_effects}`,
+      tokens,
+      6
+    );
+    const matchedCoefficients = topMatches(
+      moduleBKey,
+      (r) => `${r.model_family} ${r.specification} ${r.term} ${r.term_label} ${r.model}`,
+      tokens,
+      5
+    );
+    const didAsked = /(did|difference-in-differences|event study|causal)/.test(norm(query));
+
+    let html = "<h4>Models</h4>";
+    if (didAsked) {
+      html += "<p><strong>Scope note:</strong> this project is descriptive/associational in Modules A-B, with a short suggestive non-causal Module C extension. It does not implement a baseline DiD/event-study design.</p>";
+    }
+
+    html += "<ul>";
+    matchedModels.forEach((r) => {
+      const specLabel = specMap[r.specification] || r.specification;
+      html += `<li><strong>${esc(r.model)}</strong> (${esc(r.module)}; ${esc(specLabel)}): outcome <strong>${esc(r.outcome)}</strong>, estimator <code>${esc(r.estimator)}</code>, N=${fmtInt(r.n_used)}.<br><code>${esc(r.formula)}</code></li>`;
+    });
+    html += "</ul>";
+
+    if (matchedCoefficients.length) {
+      html += "<p><strong>Related coefficients</strong></p><ul>";
+      matchedCoefficients.forEach((r) => {
+        html += `<li>${esc(r.term_label || r.term)} in ${esc(r.model_family)} (${esc(r.specification)}): estimate=${fmtNum(r.estimate)}, p=${fmtP(r["p.value"])}</li>`;
+      });
+      html += "</ul>";
+    }
+    return html;
+  }
+
+  function answerData(query, tokens) {
+    const askedWaves = (norm(query).match(/\b(2010|2016|2022|2023)\b/g) || []).map(Number);
+    const waveRows = sampleByWave
+      .filter((r) => !askedWaves.length || askedWaves.includes(toNum(r.wave_year)))
+      .sort((a, b) => toNum(a.wave_year) - toNum(b.wave_year));
+    const flowRows = topMatches(
+      sampleFlow,
+      (r) => `${r.sample_family} ${r.wave_year} ${r.step} ${r.n}`,
+      tokens,
+      8
+    );
+    const missingRows = parentMissingness
+      .filter((r) => !askedWaves.length || askedWaves.includes(toNum(r.wave_year)))
+      .sort((a, b) => toNum(a.wave_year) - toNum(b.wave_year));
+
+    let html = "<h4>Data</h4>";
+    html += "<p><strong>Main adult LiTS sample by wave (age 25-64):</strong></p><ul>";
+    waveRows.forEach((r) => {
+      html += `<li>${waveLabel(r.wave_year)}: N=${fmtInt(r.n_total)}</li>`;
+    });
+    html += "</ul>";
+
+    if (missingRows.length) {
+      html += "<p><strong>Parent-education missingness by wave:</strong></p><ul>";
+      missingRows.forEach((r) => {
+        html += `<li>${waveLabel(r.wave_year)}: missing N=${fmtInt(r.parent_missing_n)} (${fmtPct(r.parent_missing_share)})</li>`;
+      });
+      html += "</ul>";
+    }
+
+    html += "<p><strong>Most relevant sample-flow steps:</strong></p><ul>";
+    flowRows.forEach((r) => {
+      html += `<li>${esc(r.sample_family)} | ${waveLabel(r.wave_year)} | ${esc(r.step)}: N=${fmtInt(r.n)}</li>`;
+    });
+    html += "</ul>";
+    return html;
+  }
+
+  function answerLiterature(tokens) {
+    const hits = topMatches(
+      literature,
+      (r) => `${r.key} ${r.author} ${r.title} ${r.journal} ${r.booktitle} ${r.institution} ${r.year} ${r.doi}`,
+      tokens,
+      8
+    );
+    let html = "<h4>Literature</h4>";
+    html += "<ul>";
+    hits.forEach((r) => {
+      const outlet = r.journal || r.booktitle || r.institution || "Source";
+      const doi = r.doi ? ` DOI: <code>${esc(r.doi)}</code>` : "";
+      const link = r.url ? ` <a href="${esc(r.url)}" target="_blank" rel="noopener">link</a>` : "";
+      html += `<li><strong>${esc(r.author || "Unknown author")}</strong> (${esc(r.year || "n.d.")}). ${esc(r.title || "Untitled")}. <em>${esc(outlet)}</em>.${doi}${link}</li>`;
+    });
+    html += "</ul>";
+    return html;
+  }
+
+  function renderQA() {
+    const input = document.getElementById("qa-input");
+    const askBtn = document.getElementById("qa-ask");
+    const clearBtn = document.getElementById("qa-clear");
+    const domainSel = document.getElementById("qa-domain");
+    const answerBox = document.getElementById("qa-answer");
+    const suggestionButtons = Array.from(document.querySelectorAll(".qa-suggestion"));
+
+    function runQuery() {
+      const query = (input.value || "").trim();
+      if (!query) {
+        answerBox.innerHTML = "<p>Please enter a question first.</p>";
+        return;
+      }
+      const domains = detectDomains(query, domainSel.value);
+      const tokens = tokenize(query);
+      let html = `<p class="qa-muted"><strong>Question:</strong> ${esc(query)}</p>`;
+      if (domains.includes("models")) {
+        html += answerModels(query, tokens);
+      }
+      if (domains.includes("data")) {
+        html += answerData(query, tokens);
+      }
+      if (domains.includes("literature")) {
+        html += answerLiterature(tokens);
+      }
+      html += "<p class='qa-muted'>Grounding: outputs/tables CSV artifacts and references.bib.</p>";
+      answerBox.innerHTML = html;
+    }
+
+    askBtn.addEventListener("click", runQuery);
+    clearBtn.addEventListener("click", () => {
+      input.value = "";
+      answerBox.innerHTML = "<p>Type a question and click <strong>Ask</strong>.</p>";
+      input.focus();
+    });
+    input.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        runQuery();
+      }
+    });
+    suggestionButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        input.value = btn.dataset.question || "";
+        runQuery();
+      });
+    });
+  }
+
+  function renderWaveCards() {
+    const holder = document.getElementById("wave-cards");
+    const rows = sampleByWave.slice().sort((a, b) => toNum(a.wave_year) - toNum(b.wave_year));
+    if (!rows.length) {
+      holder.innerHTML = "<p>No wave summary outputs found.</p>";
+      return;
+    }
+    holder.innerHTML = rows.map((r) => {
+      const y = toNum(r.wave_year);
+      const rank = moduleASummary.find((m) =>
+        m.subgroup_type === "overall" &&
+        m.subgroup_value === "all" &&
+        m.metric === "rank_rank_slope" &&
+        toNum(m.wave_year) === y
+      );
+      const pers = moduleASummary.find((m) =>
+        m.subgroup_type === "overall" &&
+        m.subgroup_value === "all" &&
+        m.metric === "persistence_probability" &&
+        toNum(m.wave_year) === y
+      );
+      return `
+        <div class="kpi-card">
+          <div><strong>Wave ${waveLabel(y)}</strong></div>
+          <div class="kpi-value">${fmtInt(r.n_total)}</div>
+          <div>Adult sample (25-64)</div>
+          <div style="margin-top:0.35rem">Rank slope: <strong>${fmtNum(rank && rank.estimate)}</strong></div>
+          <div>Persistence: <strong>${fmtPct(pers && pers.estimate)}</strong></div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function renderMetric() {
+    const metric = document.getElementById("metric-select").value;
+    const rows = moduleASummary
+      .filter((m) => m.subgroup_type === "overall" && m.subgroup_value === "all" && m.metric === metric)
+      .sort((a, b) => toNum(a.wave_year) - toNum(b.wave_year));
+
+    const summary = document.getElementById("metric-summary");
+    const table = document.getElementById("metric-table");
+    const chart = document.getElementById("metric-chart");
+
+    if (!rows.length) {
+      summary.innerHTML = "<p>No data available for this metric.</p>";
+      table.innerHTML = "";
+      chart.innerHTML = "<p>No chart data.</p>";
+      return;
+    }
+
+    const first = toNum(rows[0].estimate);
+    const last = toNum(rows[rows.length - 1].estimate);
+    const change = (first !== null && last !== null) ? (last - first) : null;
+    const changeText = metric === "rank_rank_slope" ? fmtNum(change) : fmtPct(change);
+
+    summary.innerHTML = `
+      <p><strong>${metricLabels[metric]}</strong> across waves. Net change (first to last wave): <strong>${changeText}</strong>.</p>
+    `;
+
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>Wave</th>
+          <th>Estimate</th>
+          <th>Std. Error</th>
+          <th>95% CI</th>
+          <th>N</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map((r) => `
+          <tr>
+            <td>${waveLabel(r.wave_year)}</td>
+            <td>${metric === "rank_rank_slope" ? fmtNum(r.estimate) : fmtPct(r.estimate)}</td>
+            <td>${fmtNum(r["std.error"])}</td>
+            <td>[${metric === "rank_rank_slope" ? fmtNum(r.ci_low) : fmtPct(r.ci_low)}, ${metric === "rank_rank_slope" ? fmtNum(r.ci_high) : fmtPct(r.ci_high)}]</td>
+            <td>${fmtInt(r.n)}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    `;
+
+    const values = rows.map((r) => toNum(r.estimate)).filter((v) => v !== null);
+    const lows = rows.map((r) => toNum(r.ci_low)).filter((v) => v !== null);
+    const highs = rows.map((r) => toNum(r.ci_high)).filter((v) => v !== null);
+    let yMin = Math.min(...values);
+    let yMax = Math.max(...values);
+    if (lows.length) yMin = Math.min(yMin, ...lows);
+    if (highs.length) yMax = Math.max(yMax, ...highs);
+    if (yMin === yMax) {
+      yMin -= 0.01;
+      yMax += 0.01;
+    }
+    const pad = 0.08 * (yMax - yMin);
+    yMin -= pad;
+    yMax += pad;
+
+    const W = 760;
+    const H = 260;
+    const M = { top: 15, right: 20, bottom: 35, left: 55 };
+    const xStep = (W - M.left - M.right) / Math.max(1, rows.length - 1);
+    const yScale = (v) => M.top + (H - M.top - M.bottom) * (1 - ((v - yMin) / (yMax - yMin)));
+    const xScale = (i) => M.left + i * xStep;
+
+    const path = rows.map((r, i) => `${i === 0 ? "M" : "L"} ${xScale(i)} ${yScale(toNum(r.estimate))}`).join(" ");
+
+    chart.innerHTML = `
+      <svg viewBox="0 0 ${W} ${H}" width="100%" height="260" role="img" aria-label="${metricLabels[metric]} chart">
+        <line x1="${M.left}" y1="${H - M.bottom}" x2="${W - M.right}" y2="${H - M.bottom}" stroke="#8ca0b5"/>
+        <line x1="${M.left}" y1="${M.top}" x2="${M.left}" y2="${H - M.bottom}" stroke="#8ca0b5"/>
+        ${rows.map((r, i) => `
+          <line x1="${xScale(i)}" y1="${yScale(toNum(r.ci_low))}" x2="${xScale(i)}" y2="${yScale(toNum(r.ci_high))}" stroke="#7c8ea5" stroke-width="1.5"/>
+          <circle cx="${xScale(i)}" cy="${yScale(toNum(r.estimate))}" r="4" fill="#0d3b66"/>
+          <text x="${xScale(i)}" y="${H - 12}" text-anchor="middle" font-size="12">${waveLabel(r.wave_year)}</text>
+        `).join("")}
+        <path d="${path}" fill="none" stroke="#0d3b66" stroke-width="2.2"/>
+        <text x="8" y="${M.top + 8}" font-size="12" fill="#4a5b6d">${metricLabels[metric]}</text>
+      </svg>
+    `;
+  }
+
+  function renderModuleB() {
+    const familySelect = document.getElementById("family-select");
+    const specSelect = document.getElementById("spec-select");
+
+    const families = [...new Set(moduleBKey.map((r) => r.model_family).filter(Boolean))];
+    familySelect.innerHTML = families.map((f) => `<option value="${f}">${familyLabels[f] || f}</option>`).join("");
+
+    function fillSpecs() {
+      const chosenFamily = familySelect.value;
+      const specs = [...new Set(moduleBKey
+        .filter((r) => r.model_family === chosenFamily)
+        .map((r) => r.specification)
+        .filter(Boolean))];
+      specSelect.innerHTML = specs.map((s) => `<option value="${s}">${s}</option>`).join("");
+    }
+
+    function drawTables() {
+      const chosenFamily = familySelect.value;
+      const chosenSpec = specSelect.value;
+      const rows = moduleBKey.filter((r) => r.model_family === chosenFamily && r.specification === chosenSpec);
+      const waveRows = moduleBWave.filter((r) => r.model_family === chosenFamily && r.specification === chosenSpec);
+
+      document.getElementById("moduleb-table").innerHTML = `
+        <thead>
+          <tr>
+            <th>Term</th>
+            <th>Estimate</th>
+            <th>Std. Error</th>
+            <th>P-value</th>
+            <th>N used</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((r) => `
+            <tr>
+              <td>${r.term_label || r.term}</td>
+              <td>${fmtNum(r.estimate)}</td>
+              <td>${fmtNum(r["std.error"])}</td>
+              <td>${fmtP(r["p.value"])}</td>
+              <td>${fmtInt(r.n_used)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      `;
+
+      document.getElementById("moduleb-wave-table").innerHTML = `
+        <thead>
+          <tr>
+            <th>Comparison</th>
+            <th>Estimate</th>
+            <th>Cluster p</th>
+            <th>Bootstrap p</th>
+            <th>Bootstrap interpretation</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${waveRows.map((r) => `
+            <tr>
+              <td>${(r.comparison || "").replaceAll("_", " ")}</td>
+              <td>${fmtNum(r.estimate)}</td>
+              <td>${fmtP(r["p.value"])}</td>
+              <td>${fmtP(r["bootstrap_p.value"])}</td>
+              <td>${(r.bootstrap_inference || "-").replaceAll("_", " ")}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      `;
+    }
+
+    fillSpecs();
+    drawTables();
+    familySelect.addEventListener("change", () => {
+      fillSpecs();
+      drawTables();
+    });
+    specSelect.addEventListener("change", drawTables);
+  }
+
+  function renderModuleC() {
+    const sel = document.getElementById("scenario-select");
+    const scenarios = moduleCScenarios.slice();
+    sel.innerHTML = scenarios.map((s) => {
+      const sid = s.scenario_id || "";
+      return `<option value="${sid}">${scenarioLabels[sid] || sid}</option>`;
+    }).join("");
+
+    function drawScenario() {
+      const sid = sel.value;
+      const meta = scenarios.find((s) => s.scenario_id === sid) || {};
+      const rows = moduleCRobust.filter((r) => r.scenario_id === sid && (r.term === "parent_low_edu" || r.status !== "estimated"));
+
+      const metaStatus = (meta.scenario_status || "unknown").replaceAll("_", " ");
+      document.getElementById("scenario-meta").innerHTML = `
+        <p>
+          <strong>Status:</strong> <span class="status-chip status-${meta.scenario_status || "caution"}">${metaStatus}</span>
+          | <strong>Split rule:</strong> ${meta.split_rule || "-"}
+          | <strong>Threshold:</strong> ${meta.split_threshold ?? "-"}
+          | <strong>Low group N:</strong> ${fmtInt(meta.n_low_group)}
+          | <strong>High group N:</strong> ${fmtInt(meta.n_high_group)}
+        </p>
+      `;
+
+      document.getElementById("modulec-table").innerHTML = `
+        <thead>
+          <tr>
+            <th>Outcome model</th>
+            <th>Status</th>
+            <th>Estimate (parent_low_edu)</th>
+            <th>Std. Error</th>
+            <th>P-value</th>
+            <th>Support reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((r) => `
+            <tr>
+              <td>${r.model || "-"}</td>
+              <td>${(r.status || "-").replaceAll("_", " ")}</td>
+              <td>${fmtNum(r.estimate)}</td>
+              <td>${fmtNum(r["std.error"])}</td>
+              <td>${fmtP(r["p.value"])}</td>
+              <td>${(r.support_reason || "-").replaceAll("_", " ")}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      `;
+
+      const keyOutcomes = ["education_stopped_covid", "any_remote_challenge", "support_mother", "challenge_internet", "challenge_device"];
+      const summaryRows = moduleCSummary
+        .filter((r) => r.group === "overall" && r.group_value === "all" && keyOutcomes.includes(r.outcome));
+
+      document.getElementById("modulec-summary-table").innerHTML = `
+        <thead>
+          <tr>
+            <th>Outcome</th>
+            <th>Weighted rate</th>
+            <th>Valid N</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${summaryRows.map((r) => `
+            <tr>
+              <td>${r.outcome_label || r.outcome}</td>
+              <td>${fmtPct(r.estimate)}</td>
+              <td>${fmtInt(r.n_non_missing)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      `;
+    }
+
+    drawScenario();
+    sel.addEventListener("change", drawScenario);
+  }
+
+  function renderAudit() {
+    const counts = claimAudit.reduce((acc, r) => {
+      const s = r.status || "unknown";
+      acc[s] = (acc[s] || 0) + 1;
+      return acc;
+    }, {});
+
+    document.getElementById("audit-counts").innerHTML = `
+      <p>
+        ${(Object.keys(counts).sort().map((k) => `<span class="status-chip status-${k}">${k}: ${counts[k]}</span>`).join(" "))}
+      </p>
+    `;
+
+    function drawTable() {
+      const f = document.getElementById("audit-filter").value;
+      const rows = claimAudit.filter((r) => f === "all" ? true : (r.status === f));
+      document.getElementById("audit-table").innerHTML = `
+        <thead>
+          <tr>
+            <th>Module</th>
+            <th>Check</th>
+            <th>Status</th>
+            <th>Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((r) => `
+            <tr>
+              <td>${r.module || "-"}</td>
+              <td>${r.check_id || "-"}</td>
+              <td><span class="status-chip status-${r.status || "caution"}">${r.status || "-"}</span></td>
+              <td>${r.detail || "-"}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      `;
+    }
+
+    drawTable();
+    document.getElementById("audit-filter").addEventListener("change", drawTable);
+  }
+
+  function renderSampleFlow() {
+    const rows = sampleFlow.slice().sort((a, b) => {
+      if (String(a.sample_family) === String(b.sample_family)) {
+        return toNum(a.wave_year) - toNum(b.wave_year);
+      }
+      return String(a.sample_family).localeCompare(String(b.sample_family));
+    });
+
+    document.getElementById("sample-flow-table").innerHTML = `
+      <thead>
+        <tr>
+          <th>Sample family</th>
+          <th>Wave</th>
+          <th>Step</th>
+          <th>N</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map((r) => `
+          <tr>
+            <td>${r.sample_family || "-"}</td>
+            <td>${waveLabel(r.wave_year)}</td>
+            <td>${r.step || "-"}</td>
+            <td>${fmtInt(r.n)}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    `;
+  }
+
+  renderWaveCards();
+  renderMetric();
+  document.getElementById("metric-select").addEventListener("change", renderMetric);
+  renderModuleB();
+  renderModuleC();
+  renderAudit();
+  renderSampleFlow();
+  renderQA();
+})();
+</script>
