@@ -10,6 +10,8 @@ format:
   html:
     toc: true
     number-sections: true
+  pdf:
+    toc: false
   docx:
     toc: true
 execute:
@@ -168,6 +170,10 @@ parent_harmonization_value <- function(variant, wave_year, column = "estimate") 
 ## Abstract {.unnumbered}
 
 Uzbekistan has nearly doubled the number of higher education institutions since 2017, yet no multi-wave evidence exists on whether family background is losing its grip on educational attainment. This paper uses the Life in Transition Survey for 2010, 2016, and 2022-23 to provide the first three-wave profile of intergenerational educational mobility in the country. The rank-rank persistence slope rises from `r fmt_num(metric_est("rank_rank_slope", 2010))` in 2010 to `r fmt_num(metric_est("rank_rank_slope", 2016))` in 2016 (p = `r fmt_p(rank_change_value("2010_to_2016", "p.value"))`) and stands at `r fmt_num(metric_est("rank_rank_slope", 2022))` in 2022-23. Parental education is the strongest and most stable predictor of attainment across nested pooled specifications; in 2022-23, `r fmt_pct(transition_summary$share[transition_summary$wave_year == 2022 & transition_summary$parent_ed_level == "tertiary" & transition_summary$own_ed_level == "tertiary"])` of respondents from university-educated families also reached university. A child-module extension documents widespread pandemic-era learning disruption and heavy reliance on maternal support, but no clear gap in education stoppage by parental education. Expanding formal access has not yet weakened the link between family background and schooling outcomes.
+
+**Keywords:** intergenerational mobility, educational attainment, Uzbekistan, Life in Transition Survey, rank-rank slope
+
+**JEL codes:** I24, I26, J62, P36
 
 ## Introduction
 
