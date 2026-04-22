@@ -1,0 +1,41 @@
+project:
+  type: default
+  output-dir: outputs/rendered
+
+bibliography: references.bib
+link-citations: true
+reference-section-title: References
+
+execute:
+  echo: false
+  warning: false
+  message: false
+
+format:
+  html:
+    toc: true
+    number-sections: true
+    theme: cosmo
+  pdf:
+    documentclass: article
+    papersize: letter
+    fontsize: 12pt
+    geometry:
+      - margin=1in
+    linestretch: 2
+    number-sections: true
+    toc: false
+    colorlinks: true
+    linkcolor: black
+    urlcolor: blue
+    citecolor: black
+    fig-pos: "htbp"
+    keep-tex: false
+    include-in-header:
+      text: |
+        \usepackage{pdflscape}
+        \renewcommand{\abstractname}{}
+  docx:
+    toc: true
+
+editor: visual

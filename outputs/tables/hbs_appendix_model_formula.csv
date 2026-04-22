@@ -1,0 +1,2 @@
+model,formula
+hbs_coresident_attainment,own_education_years ~ parent_proxy_years + female + urban + cohort | province

@@ -1,0 +1,153 @@
+---
+title: "Uzbekistan Expanded Higher Education. Did Equality of Opportunity Follow?"
+subtitle: "Evidence from 2010–2023"
+author:
+  - name: "Nozimjon Ortiqov"
+    affiliation: "Center for Economic Research and Reforms"
+    note: "CAP Fellow"
+date: "April 2026"
+format:
+  html:
+    toc: false
+    number-sections: false
+    theme: [cosmo, styles/policy-brief.scss]
+  typst:
+    toc: false
+    number-sections: false
+    template-partials:
+      - styles/typst-template.typ
+      - styles/typst-show.typ
+    fontsize: 10pt
+    fig-width: 6.3
+    fig-height: 4
+    margin:
+      top: 2.5cm
+      bottom: 2.5cm
+      x: 2.5cm
+bibliography: []
+suppress-bibliography: true
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+
+source(file.path("..", "R", "91_manuscript_helpers.R"))
+load_main_manuscript_context("..")
+
+bv <- utils::read.csv(file.path("brief_values.csv"), stringsAsFactors = FALSE)
+bval <- function(key) bv$value[bv$key == key]
+
+hbs_support_context <- read_csv_safe(project_file("outputs", "tables", "hbs_household_support_context.csv"))
+
+hbs_val <- function(metric, column = "national") {
+  rows <- hbs_support_context[hbs_support_context$metric == metric, ]
+  if (nrow(rows) == 0 || !(column %in% names(rows))) return(NA)
+  as.numeric(rows[[column]][1])
+}
+
+rpct <- function(x) sprintf("%.0f", 100 * as.numeric(x))
+```
+
+::: {.callout-note title="KEY MESSAGES"}
+- **Family background remains a strong predictor** of educational attainment. In 2022--23, `r rpct(as.numeric(gsub("%", "", bval("tertiary_persistence"))) / 100)` percent of respondents from university-educated families also reached university. Those from less-educated backgrounds were concentrated at upper-secondary level.
+- **When schools closed, the burden fell on families.** Mothers provided `r rpct(as.numeric(gsub("%", "", bval("support_mother"))) / 100)` percent of reported learning support. Lower-resourced homes faced more internet and device barriers.
+- **Tertiary expansion is necessary but not sufficient.** A larger system is not necessarily a fairer one. What matters is whether disadvantaged students enter, stay, and complete.
+:::
+
+## The expansion is real, but uneven
+
+Since 2017, Uzbekistan's higher-education system has grown rapidly. The number of institutions rose from 119 in 2019/20 to 222 by 2024/25. Total enrollment increased from about 441,000 to over 1.4 million.^[Administrative higher-education series compiled from official sources. Covers all recognized higher education institutions nationwide.] But this growth was not uniform. The national average more than doubled (from 73 to 180 students per 1,000 youth aged 20--24), but no region outside Tashkent city has caught up with where the capital started (@fig-expansion).
+
+![Regional higher-education growth, 2020/21 to 2024/25 (excluding Tashkent city). *Source: Administrative higher-education series. Grey dots show 2020/21 levels; colored dots show 2024/25 levels. Tashkent city excluded (it grew from ~1,026 to ~2,869 per 1,000). Regions colored by expansion intensity.*](../outputs/figures/fig1_regional_final.png){#fig-expansion}
+
+Household resources shape who benefits from new capacity. In high-expansion regions, 26 percent of remittance-receiving households direct remittances toward education, compared with 16 percent in low-expansion regions.^[Descriptive comparison from the Household Budget Survey (2021--2025), split by regional expansion intensity.] About `r rpct(hbs_val("education_spending_positive"))` percent of households report positive education spending, and `r rpct(hbs_val("has_tutoring"))` percent pay for tutoring. More seats and unequal household resources coexist.
+
+## Family background still determines who benefits
+
+Three waves of the Life in Transition Survey make the inequality concrete.^[The Life in Transition Survey (LiTS) is conducted by the EBRD. The 2010 and 2016 waves covered 10 oblasts; 2022--23 expanded to all 14. Analytical sample: `r format(as.numeric(bval("sample_n")), big.mark = ",")` adults aged 25--64 with non-missing own and parental education.] In 2022--23, `r rpct(as.numeric(gsub("%", "", bval("tertiary_persistence"))) / 100)` percent of respondents whose parents had university degrees also attained a degree. Those from upper-secondary backgrounds were split between staying at the same level and moving up. For lower-origin families, the sample is too thin for precise estimates, itself a sign of limited access at the bottom.
+
+A persistence score (how closely children's educational position tracks their parents') confirms this picture across waves.^[The persistence score is a within-wave rank--rank slope. Higher values mean children's educational rank follows parental rank more closely. The 2010 wave recorded parental education differently and had higher missingness; sensitivity checks preserve the wave ordering but the 2010 level carries more uncertainty.] It rose from `r bval("persistence_2010")` in 2010 to `r bval("persistence_2016")` in 2016 (a statistically significant increase, _p_ < 0.01), and stood at `r bval("persistence_2022")` in 2022--23 (@fig-persistence). The decline after 2016 is not statistically significant. In broad international comparison, these levels fall in a moderate-to-high range for developing and middle-income countries.^[Hertz et al. (2008) place intergenerational education correlations between about 0.20 and 0.60 across countries. See also Narayan et al. (2018) and Aydemir and Yazici (2019).]
+
+![Persistence score across LiTS waves. Higher values mean children's educational position tracks their parents' more closely. *Source: LiTS waves II (2010), III (2016), IV (2022--23). Adults aged 25--64 in Uzbekistan. Shaded band: 95% confidence interval.*](../outputs/figures/tier_a_rank_rank_by_wave.png){#fig-persistence}
+
+Controlling for region, birth cohort, urban residence, and gender does not change this conclusion. Parental education remains the strongest predictor of attainment in models combining all three survey waves. Adding migration exposure and household structure barely moves the parental-education coefficient. Urban residents show higher upward mobility than rural residents in every wave, and regional variation is wide: in 2022--23 the persistence score ranged from near zero in some regions to above 0.4 in Tashkent city.
+
+Nothing in the data so far suggests that expansion is weakening the link between parental background and attainment. Most adults surveyed in 2022--23 finished their schooling before the post-2017 surge, so the expansion has not yet had time to show up in these profiles. Access alone will not close the gap.
+
+## When schools closed, families were on their own
+
+The 2022--23 LiTS child module covers roughly 180 households with school-age children. The subsample is small; the disruption it records is not.^[Respondents with a child enrolled before COVID and non-missing parental schooling. Results describe patterns; they are not causal estimates.] @fig-disruption summarizes the scale.
+
+```{r}
+#| label: fig-disruption
+#| fig-cap: "COVID-19 disruption and household learning support. *Source: LiTS IV (2022--23) child module, Uzbekistan subsample (~180 households).*"
+#| fig-width: 5.5
+#| fig-height: 3
+
+disruption_data <- data.frame(
+  label = c(
+    "Mother as primary support",
+    "Education stopped",
+    "Any remote-learning barrier",
+    "Internet difficulties",
+    "Device constraints",
+    "Father as primary support"
+  ),
+  value = c(87.0, 78.3, 75.8, 72.6, 63.5, 3.7),
+  category = c("Support", "Disruption", "Disruption", "Barriers", "Barriers", "Support"),
+  stringsAsFactors = FALSE
+)
+disruption_data$label <- factor(disruption_data$label, levels = rev(disruption_data$label))
+
+ggplot2::ggplot(disruption_data, ggplot2::aes(x = value, y = label, fill = category)) +
+  ggplot2::geom_col(width = 0.6, show.legend = FALSE) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(value, "%")),
+    hjust = -0.15, size = 2.8, color = "grey30"
+  ) +
+  ggplot2::scale_fill_manual(values = c(
+    "Disruption" = "#1b6ca8",
+    "Barriers" = "#c56b00",
+    "Support" = "#6c7a89"
+  )) +
+  ggplot2::scale_x_continuous(
+    limits = c(0, 102),
+    expand = ggplot2::expansion(mult = c(0, 0))
+  ) +
+  ggplot2::labs(x = "Percent of households", y = NULL) +
+  ggplot2::theme_minimal(base_size = 9) +
+  ggplot2::theme(
+    panel.grid.major.y = ggplot2::element_blank(),
+    panel.grid.minor = ggplot2::element_blank(),
+    plot.margin = ggplot2::margin(t = 2, b = 2, l = 5, r = 10)
+  )
+```
+
+`r rpct(as.numeric(gsub("%", "", bval("stopped_covid"))) / 100)` percent of households reported that a child's education stopped entirely. Nearly three in four faced at least one barrier to remote learning: `r rpct(as.numeric(gsub("%", "", bval("challenge_internet"))) / 100)` percent cited internet problems, `r rpct(as.numeric(gsub("%", "", bval("challenge_device"))) / 100)` percent lacked adequate devices. When formal schooling was interrupted, mothers provided most reported learning support: `r rpct(as.numeric(gsub("%", "", bval("support_mother"))) / 100)` percent of cases, compared with `r rpct(as.numeric(gsub("%", "", bval("support_father"))) / 100)` percent for fathers. Families with less-educated parents reported more internet and device difficulties.
+
+The pattern is not specific to pandemics. When formal instruction stops, lower-resource families are more exposed. Digital inclusion requires reliable connections and working devices; not all households can substitute for schools.
+
+## Three priorities for the next reform phase
+
+This brief is descriptive; it does not estimate the effect of specific reforms. Three areas stand out where policy can be better matched to the problem.
+
+**1. Intervene earlier and at predictable risk points.**
+Disadvantage accumulates before tertiary entry. The Ministry of Preschool and School Education and regional education departments should focus on three transitions: end of lower secondary, end of upper secondary, and first year of tertiary. *Near-term (2026--27):* diagnostic assessments tied to remediation at grades 9 and 11, with rural districts prioritized. *Medium-term (2027--29):* structured academic support and transition guidance for students from first-generation and rural backgrounds around national exam years. A concrete indicator: entrance-exam participation and first-year enrollment rates disaggregated by region, gender, and rural-urban status.
+
+**2. Judge tertiary expansion by who enters, stays, and finishes.**
+Additional seats do not address information gaps, weaker preparation, or unfamiliarity with application procedures. *Near-term:* the Ministry of Higher Education, Science and Innovation should require new and branch-campus institutions in high-expansion regions to run structured outreach in secondary schools. *Medium-term:* need-based grants, rural dormitory and transport support, and preparatory courses in low-access districts. Academic bridge programs and first-year advising should be standard for students whose parents did not attend university. *Ongoing:* first-year retention monitored as a routine metric; quality assurance and student-support capacity scaled with admissions.
+
+**3. Build a routine equity-monitoring system.**
+Uzbekistan currently has no regular mechanism for tracking whether opportunity is becoming more equal. *Near-term (2026--27):* the National Statistics Committee, in coordination with the Ministry of Higher Education, Science and Innovation, should publish annual enrollment and completion rates disaggregated by region and gender; existing administrative data already support this. *Longer-term (2028+):* a dashboard linking administrative records on enrollment, retention, exam participation, and completion with household-survey indicators of parental education, urban-rural residence, and learning conditions.
+
+::: {.callout-tip title="What would success look like?"}
+In five years, an effective equity strategy would show: (a) more first-generation students entering tertiary education, (b) smaller urban-rural gaps in completion, (c) a lower persistence score, closer to the bottom of the international range, and (d) disaggregated outcomes published routinely. The LiTS data used here cover only three snapshots over 13 years. A system built on administrative records could provide annual updates and flag disparities as they develop.
+:::
+
+---
+
+*A note on the evidence.* This brief draws on patterns in repeated cross-sectional survey data. It does not estimate causal effects of specific reforms. Most adult attainment observed in the surveys was shaped before the post-2017 expansion, so the results establish how strong family-background persistence is but cannot yet tell us whether the expansion is weakening it. The COVID module covers a small subsample and illustrates patterns rather than proves mechanisms. These are real limitations, but they do not change what the data show: family background still shapes who gets a degree in Uzbekistan, and rapid expansion has not yet narrowed the opportunity gap. Full methods, diagnostics, and robustness tests are in the companion research paper and technical appendix.

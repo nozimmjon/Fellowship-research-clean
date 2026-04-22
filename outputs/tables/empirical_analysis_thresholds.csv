@@ -1,0 +1,10 @@
+module,threshold_id,threshold_value,threshold_unit,applies_to,rationale
+Module A,analytic_age_range,25-64,years,Age-restricted LiTS analytical sample,Keeps the adult sample in a range where own education is largely complete.
+Module A,minimum_descriptive_cell_n,30,observations,"National, subgroup, and transition outputs",Suppresses sparse descriptive cells and unstable subgroup estimates.
+Module B,minimum_model_n,100,observations,Pooled fixed-effects models,Prevents pooled regressions from being fit on undersized combined samples.
+Module B,minimum_pooled_non_missing_share,0.20,share,Candidate extended controls,Requires broad pooled support before an optional household control can enter the extended specification.
+Module B,minimum_wave_non_missing_share,0.10,share,Candidate extended controls in each wave,Prevents a control from entering when support collapses in one wave.
+Module B,minimum_unique_values,2,distinct values,Candidate extended controls,Requires observed variation before a control can be used in the extended specification.
+Module C,minimum_model_n,80,observations,Appendix region-fixed-effects logits,Avoids logit estimation on very small complete-case samples.
+Module C,minimum_group_n,15,observations,Low-vs-high parental-education split,Requires at least minimal support in each parental-education group.
+Module C,minimum_events_per_group,2,events and non-events,Low-vs-high parental-education split,Requires at least two events and two non-events in each group for each outcome.

@@ -1,0 +1,7 @@
+wave_year,sample_support,region_count,rank_valid_n,transition_valid_n,sample_support_label
+2010,common_region_only,10,913,913,Common-region support only
+2016,common_region_only,10,1185,1185,Common-region support only
+2022,common_region_only,10,460,460,Common-region support only
+2010,full_sample,10,913,913,Full sample
+2016,full_sample,10,1185,1185,Full sample
+2022,full_sample,14,776,776,Full sample

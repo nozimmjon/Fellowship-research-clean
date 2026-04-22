@@ -1,0 +1,129 @@
+/*-- scss:defaults --*/
+
+$font-family-sans-serif: "Roboto", -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+$primary: #1b6ca8;
+$secondary: #c56b00;
+$body-color: #2c3e50;
+$link-color: $primary;
+$font-size-base: 1rem;
+$headings-color: $primary;
+$callout-color-note: $primary;
+
+/*-- scss:rules --*/
+
+body {
+  max-width: 780px;
+  margin: 0 auto;
+  font-size: 15px;
+  line-height: 1.55;
+  color: $body-color;
+}
+
+p {
+  margin-bottom: 0.6rem;
+}
+
+/* Title block */
+.quarto-title {
+  border-bottom: 3px solid $primary;
+  padding-bottom: 0.8rem;
+  margin-bottom: 1.5rem;
+}
+
+.quarto-title .title {
+  color: $primary;
+  font-size: 1.65rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.quarto-title .subtitle {
+  color: lighten($body-color, 20%);
+  font-size: 1.05rem;
+  font-weight: 400;
+}
+
+/* Section headings with top border */
+h2 {
+  border-top: 3px solid $primary;
+  padding-top: 0.5rem;
+  margin-top: 1.4rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: $primary;
+}
+
+h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: darken($primary, 10%);
+}
+
+/* Key Messages callout */
+.callout-note {
+  background-color: #f0f5fa;
+  border-left: 4px solid $primary;
+}
+
+/* At a Glance callout */
+.callout-important {
+  background-color: #fff8f0;
+  border-left: 4px solid $secondary;
+}
+
+.callout-important .callout-body p {
+  font-size: 1.15rem;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+/* Recommendation cards */
+.callout-tip {
+  background-color: #f8fafb;
+  border-left: 4px solid $primary;
+  margin-bottom: 0.8rem;
+}
+
+.callout-tip .callout-title {
+  font-weight: 700;
+  color: $primary;
+}
+
+/* Figures */
+figure {
+  margin: 1rem 0;
+}
+
+figcaption {
+  font-size: 0.85rem;
+  color: lighten($body-color, 25%);
+  margin-top: 0.4rem;
+}
+
+/* Footnotes */
+.footnotes {
+  border-top: 1px solid #dee2e6;
+  margin-top: 2rem;
+  padding-top: 0.8rem;
+  font-size: 0.85rem;
+}
+
+/* Tables */
+table {
+  font-size: 0.9rem;
+}
+
+/* Print-friendly */
+@media print {
+  body {
+    font-size: 11pt;
+    max-width: 100%;
+  }
+  h2 {
+    page-break-after: avoid;
+  }
+  figure {
+    page-break-inside: avoid;
+  }
+}

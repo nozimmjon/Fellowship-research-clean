@@ -1,0 +1,907 @@
+---
+title: "Technical Appendix"
+subtitle: "Intergenerational Education Mobility in Uzbekistan"
+author: "Research Team"
+date: today
+format:
+  html:
+    toc: true
+    number-sections: true
+  docx:
+    toc: true
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+## A. Data Inventory
+
+```{r}
+#| label: tbl-data-inventory
+#| tbl-cap: "Project data inventory used in the locked replication package."
+read_csv_safe <- function(path) {
+  tryCatch(
+    utils::read.csv(path),
+    error = function(e) data.frame(note = paste("Could not read", basename(path), "-", conditionMessage(e)))
+  )
+}
+
+fmt_num <- function(x, digits = 3) {
+  sprintf(paste0("%.", digits, "f"), as.numeric(x))
+}
+
+fmt_pct <- function(x, digits = 1) {
+  sprintf(paste0("%.", digits, "f percent"), 100 * as.numeric(x))
+}
+
+fmt_p <- function(x) {
+  x <- as.numeric(x)
+  if (is.na(x)) {
+    return(NA_character_)
+  }
+  if (x < 0.001) {
+    return("<0.001")
+  }
+  sprintf("%.3f", x)
+}
+
+inv_file <- file.path("..", "data", "metadata", "data_inventory_template.csv")
+read_csv_safe(inv_file)
+```
+
+## B. Variable Dictionary
+
+```{r}
+#| label: tbl-variable-dictionary
+#| tbl-cap: "Variable dictionary for the harmonized data pipeline."
+dict_file <- file.path("..", "data", "metadata", "variable_dictionary_template.csv")
+read_csv_safe(dict_file)
+```
+
+## C. Identification Strategy
+
+- Module A fixed measure set: rank-rank slope, transition matrix, upward mobility rate, downward mobility rate, persistence probability
+- Module B: descriptive or associational models with household and regional controls
+- Module C: LiTS IV mechanism models (2022-23 only), interpreted as suggestive non-causal evidence
+- Modules A and B do not support causal claims
+
+## C1. Module A Locked Measure Set
+
+```{r}
+#| label: tbl-locked-measure-set
+#| tbl-cap: "Locked Module A mobility measure set."
+spec_file <- file.path("..", "data", "metadata", "mobility_measure_set.csv")
+read_csv_safe(spec_file)
+```
+
+## D. Robustness Checklist
+
+The appendix reports only the robustness and diagnostic checks implemented in the locked repository:
+
+- Alternative mobility definitions within the locked measure bundle
+- Parent proxy definition checks
+- 2010 parent-years harmonization check
+- Parental-education missingness diagnostics and sensitivity bounds
+- Module B specification-discipline and wave-difference checks
+- Cross-wave subgroup trend comparisons
+- Module C split-threshold sensitivity (`median`, `<=11`, `<=9`)
+- Module C sample-composition and fixed-effect attrition checks
+
+## D1. Empirical Audit Summary
+
+```{r}
+#| label: tbl-claim-audit
+#| tbl-cap: "Empirical claim-audit summary."
+claim_audit_file <- file.path("..", "outputs", "tables", "empirical_claim_audit.csv")
+
+if (file.exists(claim_audit_file)) {
+  claim_audit <- read_csv_safe(claim_audit_file)
+  claim_audit$Status <- gsub("_", " ", claim_audit$status)
+  knitr::kable(
+    claim_audit[, c("module", "check_id", "Status", "detail")],
+    col.names = c("Module", "Check", "Status", "Detail")
+  )
+} else {
+  data.frame(note = "Empirical claim-audit outputs are not available yet.")
+}
+```
+
+## D1A. Weight And Threshold Diagnostics
+
+The two housekeeping tables below centralize the weighted-sample diagnostics and explicit design thresholds that otherwise sit across several functions. They do not change the estimates, but they make the locked rules easier to audit.
+
+```{r}
+#| label: tbl-weight-diagnostics
+#| tbl-cap: "Weight-distribution diagnostics for the weighted LiTS samples."
+weight_diag_file <- file.path("..", "outputs", "tables", "empirical_weight_diagnostics.csv")
+
+if (file.exists(weight_diag_file)) {
+  weight_diag <- read_csv_safe(weight_diag_file)
+  weight_diag$wave_year[is.na(weight_diag$wave_year)] <- 2022
+  for (col in c("p1", "p5", "p25", "p50", "p75", "p95", "p99")) {
+    weight_diag[[col]] <- fmt_num(weight_diag[[col]], digits = 1)
+  }
+  knitr::kable(
+    weight_diag[, c("sample_label", "wave_year", "p1", "p5", "p25", "p50", "p75", "p95", "p99", "n_non_missing")],
+    col.names = c("Sample", "Wave", "P1", "P5", "P25", "P50", "P75", "P95", "P99", "Non-missing N")
+  )
+} else {
+  data.frame(note = "Weight diagnostics are not available yet.")
+}
+```
+
+```{r}
+#| label: tbl-analysis-thresholds
+#| tbl-cap: "Centralized analysis thresholds used across Modules A-C."
+threshold_file <- file.path("..", "outputs", "tables", "empirical_analysis_thresholds.csv")
+
+if (file.exists(threshold_file)) {
+  thresholds <- read_csv_safe(threshold_file)
+  knitr::kable(
+    thresholds[, c("module", "threshold_id", "threshold_value", "threshold_unit", "applies_to", "rationale")],
+    col.names = c("Module", "Threshold", "Value", "Unit", "Applies to", "Rationale")
+  )
+} else {
+  data.frame(note = "Analysis-threshold registry is not available yet.")
+}
+```
+
+## D2. Parent-Measure Robustness
+
+```{r}
+#| label: tbl-parent-measure-robustness
+#| tbl-cap: "Parent-measure robustness for the national rank-rank slope and persistence rate."
+parent_robust_file <- file.path("..", "outputs", "tables", "empirical_parent_measure_robustness.csv")
+
+if (file.exists(parent_robust_file)) {
+  parent_robust <- read_csv_safe(parent_robust_file)
+  parent_robust <- parent_robust[
+    parent_robust$subgroup_type == "overall" &
+      parent_robust$subgroup_value == "all" &
+      parent_robust$metric %in% c("rank_rank_slope", "persistence_probability"),
+  ]
+
+  variant_labels <- c(
+    baseline_max = "Baseline: max parent category",
+    mean_parent_years = "Mean parent years",
+    father_only = "Father only",
+    mother_only = "Mother only",
+    both_parents_observed_only = "Both parents observed only"
+  )
+  metric_labels <- c(
+    rank_rank_slope = "Rank-rank slope",
+    persistence_probability = "Persistence probability"
+  )
+
+  parent_robust$display <- paste0(
+    fmt_num(parent_robust$estimate),
+    " [",
+    fmt_num(parent_robust$ci_low),
+    ", ",
+    fmt_num(parent_robust$ci_high),
+    "]"
+  )
+  parent_robust$variant_label <- unname(variant_labels[parent_robust$parent_measure_variant])
+  parent_robust$metric_label <- unname(metric_labels[parent_robust$metric])
+
+  parent_robust_wide <- reshape(
+    parent_robust[, c("variant_label", "metric_label", "wave_year", "display")],
+    idvar = c("variant_label", "metric_label"),
+    timevar = "wave_year",
+    direction = "wide"
+  )
+  names(parent_robust_wide) <- sub("^display\\.", "", names(parent_robust_wide))
+  parent_robust_wide <- parent_robust_wide[
+    order(
+      match(parent_robust_wide$variant_label, variant_labels),
+      match(parent_robust_wide$metric_label, metric_labels)
+    ),
+  ]
+
+  knitr::kable(
+    parent_robust_wide,
+    col.names = c("Parent-measure variant", "Metric", "2010", "2016", "2022-23")
+  )
+} else {
+  data.frame(note = "Parent-measure robustness outputs are not available yet.")
+}
+```
+
+These parent-proxy checks also clarify the paper's preferred interpretation. The rank-based series is the main cross-wave benchmark because it is less sensitive to the coarse six-category ladder used for the category-coded transition rates. The paper therefore studies relative educational persistence and category transitions, not an absolute mobility concept tied one-for-one to schooling expansion.
+
+## D2A. Parent-Years Harmonization Check
+
+This diagnostic isolates the 2010 coding asymmetry most likely to matter for the headline trend. The locked baseline uses the project-wide max-parent category and its implied years. The alternative check instead retains the maximum observed mother/father years where those years are directly observed, which mainly changes the 2010 wave because later waves are already category-coded. The purpose is not to redefine the main measure, but to verify that the 2010-to-2016 increase is not entirely an artifact of the years-to-category-to-years back-conversion in the earliest survey.
+
+```{r}
+#| label: tbl-parent-harmonization-robustness
+#| tbl-cap: "National rank-rank slope under the locked and observed-parent-years harmonization variants."
+harmonization_file <- file.path("..", "outputs", "tables", "empirical_parent_harmonization_robustness.csv")
+
+if (file.exists(harmonization_file)) {
+  harmonization <- read_csv_safe(harmonization_file)
+  harmonization$display <- paste0(
+    fmt_num(harmonization$estimate),
+    " [",
+    fmt_num(harmonization$ci_low),
+    ", ",
+    fmt_num(harmonization$ci_high),
+    "]"
+  )
+
+  harmonization_wide <- reshape(
+    harmonization[, c("variant_label", "wave_year", "display")],
+    idvar = "variant_label",
+    timevar = "wave_year",
+    direction = "wide"
+  )
+  names(harmonization_wide) <- sub("^display\\.", "", names(harmonization_wide))
+
+  knitr::kable(
+    harmonization_wide,
+    col.names = c("Harmonization variant", "2010", "2016", "2022-23")
+  )
+} else {
+  data.frame(note = "Parent-years harmonization outputs are not available yet.")
+}
+```
+
+```{r}
+#| label: tbl-parent-harmonization-change-tests
+#| tbl-cap: "Cross-wave slope-difference tests under the parent-years harmonization variants."
+harmonization_change_file <- file.path("..", "outputs", "tables", "empirical_parent_harmonization_change_tests.csv")
+
+if (file.exists(harmonization_change_file)) {
+  harmonization_change <- read_csv_safe(harmonization_change_file)
+  harmonization_change$comparison <- dplyr::recode(
+    harmonization_change$comparison,
+    `2010_to_2016` = "2010 to 2016",
+    `2016_to_2022` = "2016 to 2022-23",
+    `2010_to_2022` = "2010 to 2022-23"
+  )
+  harmonization_change$estimate <- fmt_num(harmonization_change$estimate)
+  harmonization_change$std.error <- fmt_num(harmonization_change$std.error)
+  harmonization_change$p.value <- vapply(harmonization_change$p.value, fmt_p, character(1))
+
+  knitr::kable(
+    harmonization_change[, c("variant_label", "comparison", "estimate", "std.error", "p.value")],
+    col.names = c("Harmonization variant", "Slope comparison", "Estimate", "Std. Error", "P-value")
+  )
+} else {
+  data.frame(note = "Parent-years harmonization change tests are not available yet.")
+}
+```
+
+The harmonization check leaves the main trend intact. The observed-parent-years variant mainly moves the 2010 level, while the 2016 and 2022-23 slopes remain effectively unchanged. The headline 2010-to-2016 increase therefore survives the most relevant coding asymmetry in the earliest wave, which is why the locked max-parent construction remains the main specification.
+
+## D3. Parental-Education Missingness Diagnostics
+
+```{r}
+#| label: tbl-parent-missingness-summary
+#| tbl-cap: "Observed and missing parental-education cases by wave."
+parent_missing_file <- file.path("..", "outputs", "tables", "empirical_parent_missingness_by_wave.csv")
+parent_missing_obs_file <- file.path("..", "outputs", "tables", "empirical_parent_missingness_observables.csv")
+parent_missing_sens_file <- file.path("..", "outputs", "tables", "empirical_parent_missingness_sensitivity.csv")
+
+if (file.exists(parent_missing_file)) {
+  parent_missing <- read_csv_safe(parent_missing_file)
+  parent_missing$parent_missing_share <- fmt_pct(parent_missing$parent_missing_share)
+  parent_missing$weighted_parent_missing_share <- fmt_pct(parent_missing$weighted_parent_missing_share)
+  knitr::kable(
+    parent_missing,
+    col.names = c("Wave", "N", "Observed parent education", "Missing parent education", "Unweighted missing share", "Weighted missing share")
+  )
+} else {
+  data.frame(note = "Parent-missingness summary is not available yet.")
+}
+```
+
+```{r}
+#| label: tbl-parent-missingness-observables
+#| tbl-cap: "Observable differences between observed-parent and missing-parent cases."
+if (file.exists(parent_missing_obs_file)) {
+  parent_missing_obs <- read_csv_safe(parent_missing_obs_file)
+  parent_missing_obs$observed <- ifelse(
+    grepl("share", parent_missing_obs$statistic),
+    fmt_pct(parent_missing_obs$estimate_observed_parent_education),
+    fmt_num(parent_missing_obs$estimate_observed_parent_education)
+  )
+  parent_missing_obs$missing <- ifelse(
+    grepl("share", parent_missing_obs$statistic),
+    fmt_pct(parent_missing_obs$estimate_missing_parent_education),
+    fmt_num(parent_missing_obs$estimate_missing_parent_education)
+  )
+  parent_missing_obs$diff <- ifelse(
+    grepl("share", parent_missing_obs$statistic),
+    fmt_pct(parent_missing_obs$difference_missing_minus_observed),
+    fmt_num(parent_missing_obs$difference_missing_minus_observed)
+  )
+  knitr::kable(
+    parent_missing_obs[, c("wave_year", "statistic_label", "observed", "missing", "diff")],
+    col.names = c("Wave", "Statistic", "Observed-parent cases", "Missing-parent cases", "Missing minus observed")
+  )
+} else {
+  data.frame(note = "Parent-missingness observable comparisons are not available yet.")
+}
+```
+
+```{r}
+#| label: tbl-parent-missingness-sensitivity
+#| tbl-cap: "National rank-rank slope under parental-missingness sensitivity scenarios."
+if (file.exists(parent_missing_sens_file)) {
+  parent_missing_sens <- read_csv_safe(parent_missing_sens_file)
+  parent_missing_sens <- parent_missing_sens[
+    parent_missing_sens$metric == "rank_rank_slope",
+    c("scenario_label", "wave_year", "estimate")
+  ]
+  parent_missing_sens$display <- fmt_num(parent_missing_sens$estimate)
+  parent_missing_sens_wide <- reshape(
+    parent_missing_sens[, c("scenario_label", "wave_year", "display")],
+    idvar = "scenario_label",
+    timevar = "wave_year",
+    direction = "wide"
+  )
+  names(parent_missing_sens_wide) <- sub("^display\\.", "", names(parent_missing_sens_wide))
+  knitr::kable(
+    parent_missing_sens_wide,
+    col.names = c("Sensitivity scenario", "2010", "2016", "2022-23")
+  )
+} else {
+  data.frame(note = "Parent-missingness sensitivity outputs are not available yet.")
+}
+```
+
+Across the observed-only, cell-mode, lower-bound, and upper-bound scenarios, the 2016 rank-rank slope remains above the 2010 slope. The missingness sensitivity mainly reallocates the 2010 level rather than reversing the wave ordering. That is why parental-education missingness is treated as a level and comparability problem, not as a mechanical explanation of the mid-period increase.
+
+## D4. Module B Specification Discipline
+
+The extended Module B layer is gated by explicit code-level coverage rules. A candidate current-household covariate must be non-missing for at least 20 percent of the pooled sample, non-missing for at least 10 percent of observations in every wave, and exhibit at least two distinct observed values before it can enter the extended specification. The pooled harmonized LiTS analysis files retain a stable region identifier but do not construct a harmonized PSU variable, so the implemented pooled regressions cluster at region as the fallback level. Because the Eq. 2 persistence-trend model then relies on only 10 region clusters in 2010 and 2016 and 14 in 2022-23, the wave-comparison table reports conventional region-clustered and Webb wild-cluster-bootstrap p-values side by side. In the manuscript, bootstrap `p <= 0.05` is treated as statistically distinguishable, `0.05 < p <= 0.10` as suggestive, and `p > 0.10` as imprecise.
+
+```{r}
+#| label: tbl-module-b-covariate-classification
+#| tbl-cap: "Module B covariate classification and inclusion discipline."
+module_b_class_file <- file.path("..", "outputs", "tables", "module_b_covariate_classification.csv")
+module_b_key_file <- file.path("..", "outputs", "tables", "module_b_key_coefficient_comparison.csv")
+module_b_wave_test_file <- file.path("..", "outputs", "tables", "module_b_wave_difference_tests.csv")
+
+if (file.exists(module_b_class_file)) {
+  module_b_class <- read_csv_safe(module_b_class_file)
+  module_b_class$share_non_missing <- fmt_pct(module_b_class$share_non_missing)
+  module_b_class$included_in_extended <- ifelse(module_b_class$included_in_extended, "Yes", "No")
+  knitr::kable(
+    module_b_class[, c("covariate", "control_class", "share_non_missing", "included_in_extended", "rationale")],
+    col.names = c("Covariate", "Control class", "Non-missing share", "Included in extended model", "Design note")
+  )
+} else {
+  data.frame(note = "Module B covariate-classification output is not available yet.")
+}
+```
+
+```{r}
+#| label: tbl-module-b-key-coefficients
+#| tbl-cap: "Key Module B parental coefficients across the nested specifications."
+if (file.exists(module_b_key_file)) {
+  module_b_key <- read_csv_safe(module_b_key_file)
+  module_b_key <- module_b_key[
+    module_b_key$model_family %in% c("eq2_persistence_trend", "eq3_attainment_score") &
+      module_b_key$term %in% c("parent_rank", "wave_year_fe::2016:parent_rank", "wave_year_fe::2022:parent_rank", "parent_ed_score"),
+  ]
+  module_b_key$model_label <- ifelse(
+    module_b_key$model_family == "eq2_persistence_trend",
+    "Persistence trend",
+    "Attainment score"
+  )
+  module_b_key$spec_label <- dplyr::recode(
+    module_b_key$specification,
+    minimal = "Minimal",
+    demographic = "Demographic",
+    extended = "Extended"
+  )
+  module_b_key$term_label <- dplyr::recode(
+    module_b_key$term,
+    parent_rank = "Parent rank (2010 slope)",
+    "wave_year_fe::2016:parent_rank" = "2016 minus 2010 slope",
+    "wave_year_fe::2022:parent_rank" = "2022-23 minus 2010 slope",
+    parent_ed_score = "Parent education score"
+  )
+  module_b_key$estimate <- fmt_num(module_b_key$estimate)
+  module_b_key$std.error <- fmt_num(module_b_key$std.error)
+  module_b_key$p.value <- vapply(module_b_key$p.value, fmt_p, character(1))
+  knitr::kable(
+    module_b_key[, c("model_label", "spec_label", "term_label", "estimate", "std.error", "p.value", "n_used")],
+    col.names = c("Model", "Specification", "Parameter", "Estimate", "Std. Error", "P-value", "Used N")
+  )
+} else {
+  data.frame(note = "Module B key-coefficient comparison output is not available yet.")
+}
+```
+
+```{r}
+#| label: tbl-module-b-wave-tests
+#| tbl-cap: "Conditional Module B wave-difference tests across the nested specifications."
+if (file.exists(module_b_wave_test_file)) {
+  module_b_wave_test <- read_csv_safe(module_b_wave_test_file)
+  if (nrow(module_b_wave_test) == 0 || !("specification" %in% names(module_b_wave_test))) {
+    data.frame(note = "Module B wave-difference tests produced no results for the current rebuild.")
+  } else {
+  module_b_wave_test$spec_label <- dplyr::recode(
+    module_b_wave_test$specification,
+    minimal = "Minimal",
+    demographic = "Demographic",
+    extended = "Extended"
+  )
+  module_b_wave_test$comparison_label <- dplyr::recode(
+    module_b_wave_test$comparison,
+    `2010_to_2016` = "2010 to 2016",
+    `2016_to_2022` = "2016 to 2022-23",
+    `2010_to_2022` = "2010 to 2022-23"
+  )
+  module_b_wave_test$estimate <- fmt_num(module_b_wave_test$estimate)
+  module_b_wave_test$std.error <- fmt_num(module_b_wave_test$std.error)
+  module_b_wave_test$p.value <- vapply(module_b_wave_test$p.value, fmt_p, character(1))
+  module_b_wave_test$bootstrap_p.value <- vapply(module_b_wave_test$bootstrap_p.value, fmt_p, character(1))
+  module_b_wave_test$bootstrap_inference <- gsub("_", " ", module_b_wave_test$bootstrap_inference)
+  knitr::kable(
+    module_b_wave_test[, c("spec_label", "comparison_label", "estimate", "std.error", "p.value", "bootstrap_p.value", "bootstrap_inference", "cluster_count", "n_used")],
+    col.names = c("Specification", "Conditional slope comparison", "Estimate", "Std. Error", "Clustered p", "Webb bootstrap p", "Bootstrap reading", "Region clusters", "Used N")
+  )
+  }
+} else {
+  data.frame(note = "Module B wave-difference tests are not available yet.")
+}
+```
+
+## D5. Cross-Wave Trend Tests and Composition Checks
+
+```{r}
+#| label: tbl-common-region-rank-rank
+#| tbl-cap: "National rank-rank slope under full-sample and common-region support."
+common_region_rank_file <- file.path("..", "outputs", "tables", "empirical_common_region_rank_rank.csv")
+common_region_transition_file <- file.path("..", "outputs", "tables", "empirical_common_region_transition_comparison.csv")
+
+if (file.exists(common_region_rank_file)) {
+  common_region_rank <- read_csv_safe(common_region_rank_file)
+  if (nrow(common_region_rank) == 0 || !("wave_year" %in% names(common_region_rank))) {
+    data.frame(note = "Common-region rank-rank comparison produced no results for the current rebuild.")
+  } else {
+  common_region_rank$wave_label <- dplyr::recode(
+    as.character(common_region_rank$wave_year),
+    `2010` = "2010",
+    `2016` = "2016",
+    `2022` = "2022-23"
+  )
+  common_region_rank$slope_display <- paste0(
+    fmt_num(common_region_rank$estimate),
+    " [",
+    fmt_num(common_region_rank$ci_low),
+    ", ",
+    fmt_num(common_region_rank$ci_high),
+    "]"
+  )
+  knitr::kable(
+    common_region_rank[, c("sample_support_label", "wave_label", "slope_display", "region_count", "valid_rank_sample_n")],
+    col.names = c("Support sample", "Wave", "Rank-rank slope [95% CI]", "Regions", "Valid rank N")
+  )
+  }
+} else {
+  data.frame(note = "Common-region rank-rank comparison is not available yet.")
+}
+```
+
+```{r}
+#| label: tbl-common-region-transitions
+#| tbl-cap: "2022-23 transition matrix under full-sample and common-region support."
+if (file.exists(common_region_transition_file)) {
+  common_region_transition <- read_csv_safe(common_region_transition_file)
+  if (nrow(common_region_transition) == 0 || !("wave_year" %in% names(common_region_transition))) {
+    data.frame(note = "Common-region transition comparison produced no results for the current rebuild.")
+  } else {
+  common_region_transition <- common_region_transition[
+    common_region_transition$wave_year == 2022,
+  ]
+  common_region_transition$share_display <- ifelse(
+    common_region_transition$status == "ok" & !is.na(common_region_transition$share),
+    fmt_pct(common_region_transition$share),
+    "Suppressed"
+  )
+  transition_comp_wide <- reshape(
+    common_region_transition[, c("sample_support_label", "parent_ed_level", "n_parent_total", "own_ed_level", "share_display")],
+    idvar = c("sample_support_label", "parent_ed_level", "n_parent_total"),
+    timevar = "own_ed_level",
+    direction = "wide"
+  )
+  transition_comp_wide <- transition_comp_wide[
+    order(
+      match(transition_comp_wide$sample_support_label, c("Full sample", "Common-region support only")),
+      match(transition_comp_wide$parent_ed_level, c("no_formal", "primary", "lower_secondary", "upper_secondary", "post_secondary_non_tertiary", "tertiary"))
+    ),
+  ]
+  knitr::kable(
+    transition_comp_wide,
+    col.names = c(
+      "Support sample", "Parental origin", "Parent-origin N",
+      "Own: No formal", "Own: Primary", "Own: Lower secondary",
+      "Own: Upper secondary", "Own: Post-secondary", "Own: Tertiary"
+    )
+  )
+  }
+} else {
+  data.frame(note = "Common-region transition comparison is not available yet.")
+}
+```
+
+```{r}
+#| results: asis
+common_region_interp_file <- file.path("..", "outputs", "tables", "empirical_common_region_rank_rank.csv")
+if (file.exists(common_region_interp_file)) {
+  cr_interp <- read_csv_safe(common_region_interp_file)
+  if (nrow(cr_interp) > 0 && "sample_support" %in% names(cr_interp)) {
+    full_2022 <- cr_interp[cr_interp$sample_support == "full_sample" & cr_interp$wave_year == 2022, "estimate"][[1]]
+    cr_2022 <- cr_interp[cr_interp$sample_support == "common_region_only" & cr_interp$wave_year == 2022, "estimate"][[1]]
+    cat(paste0(
+      "The balanced-region restriction leaves the 2010 and 2016 slopes unchanged because the common-support set matches the effective rank-support regions in those waves. It raises the 2022 slope from ",
+      fmt_num(full_2022), " in the full sample to ", fmt_num(cr_2022),
+      " in the common-region sample and shifts the 2022 transition matrix in the same direction. The paper therefore treats the flatter 2016-to-2022 descriptive pattern as partly composition-conditional rather than as a fully balanced geographic comparison."
+    ))
+  } else {
+    cat("The common-region comparison is not yet available for the current rebuild.")
+  }
+} else {
+  cat("The common-region comparison is not yet available for the current rebuild.")
+}
+```
+
+```{r}
+#| label: tbl-rank-rank-change-tests
+#| tbl-cap: "Raw descriptive rank-rank slope-difference tests."
+rank_change_file <- file.path("..", "outputs", "tables", "empirical_rank_rank_change_tests.csv")
+subgroup_trend_file <- file.path("..", "outputs", "tables", "empirical_subgroup_trend_checks.csv")
+
+if (file.exists(rank_change_file)) {
+  rank_change <- read_csv_safe(rank_change_file)
+  rank_change$comparison <- dplyr::recode(
+    rank_change$comparison,
+    `2010_to_2016` = "2010 to 2016",
+    `2016_to_2022` = "2016 to 2022-23",
+    `2010_to_2022` = "2010 to 2022-23"
+  )
+  rank_change$estimate <- fmt_num(rank_change$estimate)
+  rank_change$std.error <- fmt_num(rank_change$std.error)
+  rank_change$p.value <- vapply(rank_change$p.value, fmt_p, character(1))
+  knitr::kable(
+    rank_change[, c("comparison", "estimate", "std.error", "p.value")],
+    col.names = c("Raw descriptive slope comparison", "Estimate", "Std. Error", "P-value")
+  )
+} else {
+  data.frame(note = "Raw descriptive slope-difference tests are not available yet.")
+}
+```
+
+```{r}
+#| label: tbl-subgroup-trend-checks
+#| tbl-cap: "Subgroup-specific descriptive slope-difference tests."
+if (file.exists(subgroup_trend_file)) {
+  subgroup_trend <- read_csv_safe(subgroup_trend_file)
+  subgroup_trend$comparison <- dplyr::recode(
+    subgroup_trend$comparison,
+    `2010_to_2016` = "2010 to 2016",
+    `2016_to_2022` = "2016 to 2022-23"
+  )
+  subgroup_trend$estimate <- fmt_num(subgroup_trend$estimate)
+  subgroup_trend$std.error <- fmt_num(subgroup_trend$std.error)
+  subgroup_trend$p.value <- vapply(subgroup_trend$p.value, fmt_p, character(1))
+  knitr::kable(
+    subgroup_trend[, c("subgroup_type", "subgroup_value", "comparison", "estimate", "std.error", "p.value")],
+    col.names = c("Subgroup type", "Subgroup value", "Slope comparison", "Estimate", "Std. Error", "P-value")
+  )
+} else {
+  data.frame(note = "Subgroup trend checks are not available yet.")
+}
+```
+
+## D6. Fuller Module B Coefficient Tables
+
+The fuller coefficient dump below keeps one additional upward-mobility specification that is not part of the locked headline design: the low-parent subsample linear probability model. It is retained only as an exploratory sensitivity check.
+
+```{r}
+#| label: tbl-module-b-full-coefficients
+#| tbl-cap: "Full Module B coefficient output for the retained model families."
+module_b_coef_file <- file.path("..", "outputs", "tables", "module_b_model_coefficients.csv")
+
+if (file.exists(module_b_coef_file)) {
+  module_b_coef_full <- read_csv_safe(module_b_coef_file)
+  module_b_coef_full <- module_b_coef_full[
+    module_b_coef_full$model_family %in% c(
+      "eq2_persistence_trend",
+      "eq3_attainment_score",
+      "eq4_upward_full_lpm",
+      "eq5_persistence_heterogeneity"
+    ),
+  ]
+  module_b_coef_full$estimate <- fmt_num(module_b_coef_full$estimate)
+  module_b_coef_full$std.error <- fmt_num(module_b_coef_full$std.error)
+  module_b_coef_full$p.value <- vapply(module_b_coef_full$p.value, fmt_p, character(1))
+  knitr::kable(
+    module_b_coef_full[, c("model", "model_family", "specification", "term", "estimate", "std.error", "p.value", "n_used")],
+    col.names = c("Model id", "Model family", "Specification", "Term", "Estimate", "Std. Error", "P-value", "Used N")
+  )
+} else {
+  data.frame(note = "Full Module B coefficient output is not available yet.")
+}
+```
+
+## D7. Model Inventory
+
+```{r}
+#| label: tbl-model-inventory
+#| tbl-cap: "Empirical model inventory for Modules A-C and the conditional HBS appendix."
+model_inventory_file <- file.path("..", "outputs", "tables", "empirical_model_inventory.csv")
+
+if (file.exists(model_inventory_file)) {
+  model_inventory <- read_csv_safe(model_inventory_file)
+  knitr::kable(
+    model_inventory[, c("module", "model", "outcome", "estimator", "family", "link", "weighted", "fixed_effects", "parameter_scale", "interaction_structure")],
+    col.names = c("Module", "Model", "Outcome", "Estimator", "Family", "Link", "Weighted", "Fixed effects", "Parameter scale", "Interaction structure")
+  )
+} else {
+  data.frame(note = "Empirical model inventory is not available yet.")
+}
+```
+
+## D7A. Deviations From Initial Plan
+
+- The pooled Module B models cluster at region rather than PSU because the locked harmonized analysis file does not retain a cross-wave PSU identifier.
+- The few-cluster sensitivity for Eq. 2 is implemented with a Webb wild-cluster bootstrap on the fitted `fixest::feols()` objects rather than with a PSU-based correction.
+- The appendix Module C logit keeps only low parental education, urban residence, and their interaction with region fixed effects; the gender term from the earlier plan was dropped to preserve support in the sparse child-module sample.
+
+## E. Diagnostics Outputs
+
+```{r}
+mech_sample_file <- file.path("..", "outputs", "tables", "module_c_mechanism_sample.csv")
+mech_summary_file <- file.path("..", "outputs", "tables", "module_c_mechanism_summary.csv")
+mech_coef_file <- file.path("..", "outputs", "tables", "module_c_mechanism_coefficients.csv")
+robust_scenario_file <- file.path("..", "outputs", "tables", "module_c_mechanism_robustness_scenarios.csv")
+if (file.exists(mech_sample_file)) {
+  read_csv_safe(mech_sample_file)
+} else {
+  data.frame(note = "Module C mechanism sample diagnostics not available yet.")
+}
+if (file.exists(mech_summary_file)) {
+  read_csv_safe(mech_summary_file)
+} else {
+  data.frame(note = "Module C mechanism summary outputs not available yet.")
+}
+if (file.exists(mech_coef_file)) {
+  mech_df <- read_csv_safe(mech_coef_file)
+  if ("model" %in% names(mech_df)) {
+    mech_df[order(mech_df$model), ]
+  } else {
+    mech_df
+  }
+} else {
+  data.frame(note = "Module C mechanism diagnostics not available yet.")
+}
+if (file.exists(robust_scenario_file)) {
+  read_csv_safe(robust_scenario_file)
+} else {
+  data.frame(note = "Module C robustness scenarios not available yet.")
+}
+```
+
+## F. Module C Descriptive Split by Parental Education
+
+```{r}
+#| label: tbl-module-c-descriptive-split
+#| tbl-cap: "Selected Module C descriptive rates by parental-education split."
+if (file.exists(mech_summary_file)) {
+  group_labels <- c(
+    above_median_parent_edu = "Above median parent education",
+    lower_or_equal_median_parent_edu = "At or below median parent education"
+  )
+  outcome_labels <- c(
+    education_stopped_covid = "Stopped education due to COVID",
+    shared_device = "Child used shared device",
+    switched_online = "Switched to online learning",
+    challenge_internet = "Internet challenge",
+    support_mother = "Learning support from mother"
+  )
+
+  module_c_group_table <- read_csv_safe(mech_summary_file)
+  module_c_group_table <- module_c_group_table[
+    module_c_group_table$group == "parent_education" &
+      module_c_group_table$outcome %in% names(outcome_labels),
+    c("outcome", "group_value", "estimate", "n_non_missing")
+  ]
+  module_c_group_table$order_key <- match(
+    paste(module_c_group_table$outcome, module_c_group_table$group_value, sep = "::"),
+    c(
+      "education_stopped_covid::lower_or_equal_median_parent_edu",
+      "education_stopped_covid::above_median_parent_edu",
+      "shared_device::lower_or_equal_median_parent_edu",
+      "shared_device::above_median_parent_edu",
+      "switched_online::lower_or_equal_median_parent_edu",
+      "switched_online::above_median_parent_edu",
+      "challenge_internet::lower_or_equal_median_parent_edu",
+      "challenge_internet::above_median_parent_edu",
+      "support_mother::lower_or_equal_median_parent_edu",
+      "support_mother::above_median_parent_edu"
+    )
+  )
+  module_c_group_table <- module_c_group_table[order(module_c_group_table$order_key), ]
+  module_c_group_table$Outcome <- unname(outcome_labels[module_c_group_table$outcome])
+  module_c_group_table$Group <- unname(group_labels[module_c_group_table$group_value])
+  module_c_group_table$Estimate <- fmt_pct(module_c_group_table$estimate)
+
+  knitr::kable(
+    module_c_group_table[, c("Outcome", "Group", "Estimate", "n_non_missing")],
+    col.names = c("Outcome", "Group", "Estimate", "Valid N")
+  )
+} else {
+  data.frame(note = "Module C descriptive split outputs are not available yet.")
+}
+```
+
+## G. Module C Secondary Mechanism Regressions (Appendix Diagnostics Only)
+
+These logit specifications are retained as diagnostics, not as headline evidence. They are reported to document sensitivity to split support and threshold choices in the child-module sample. Relative to the broader demographic control set used in Module B, the implemented Module C logits are intentionally pared down to low parental education, urban residence, and their interaction with region fixed effects, so the gender term sketched in the fuller Module C plan is not carried into the appendix diagnostics. This simplified formula is a pragmatic sparse-sample diagnostic rather than a confirmatory continuation of the main pooled specification.
+
+```{r}
+#| label: tbl-module-c-secondary-logits
+#| tbl-cap: "Secondary Module C logit diagnostics by outcome."
+if (file.exists(mech_coef_file)) {
+  mech_term_labels <- c(
+    parent_low_edu = "Low parent education",
+    urban = "Urban",
+    "parent_low_edu:urban" = "Low parent education x urban"
+  )
+  mech_model_labels <- c(
+    m1_switched_online = "Switched to online learning",
+    m2_school_closed_no_online = "School closed without online learning",
+    m3_education_stopped_covid = "Stopped education due to COVID",
+    m4_any_remote_challenge = "Any remote-learning challenge"
+  )
+
+  module_c_coef_table <- read_csv_safe(mech_coef_file)
+  module_c_coef_table <- module_c_coef_table[
+    module_c_coef_table$model %in% names(mech_model_labels),
+    c("model", "term", "estimate", "std.error", "p.value")
+  ]
+  module_c_coef_table$Model <- unname(mech_model_labels[module_c_coef_table$model])
+  module_c_coef_table$Term <- unname(mech_term_labels[module_c_coef_table$term])
+  module_c_coef_table$Estimate <- fmt_num(module_c_coef_table$estimate)
+  module_c_coef_table$`Std. Error` <- fmt_num(module_c_coef_table$std.error)
+  module_c_coef_table$`P-value` <- vapply(module_c_coef_table$p.value, fmt_p, character(1))
+
+  knitr::kable(
+    module_c_coef_table[, c("Model", "Term", "Estimate", "Std. Error", "P-value")]
+  )
+} else {
+  data.frame(note = "Module C mechanism coefficient outputs are not available yet.")
+}
+```
+
+## G1. Module C Stoppage Fragility Check
+
+The baseline Module C split uses mean parent years. This is an explicit exception to the main max-parent proxy used in Modules A and B, because the weighted median split becomes support-degenerate under the max-parent rule in the child-module sample. The strict `<=9` split is likewise retained for transparency but treated as a weak-support scenario when the low-parent group becomes too small for stable FE logit estimation. Across these appendix diagnostics, a scenario is treated as estimable only when each parental-education group contains at least 15 observations and each group contributes at least two events and two non-events for the outcome.
+
+```{r}
+#| label: tbl-module-c-stoppage-fragility
+#| tbl-cap: "Module C stoppage coefficients across split-threshold robustness scenarios."
+robust_coef_file <- file.path("..", "outputs", "tables", "module_c_mechanism_robustness_coefficients.csv")
+
+if (file.exists(robust_coef_file)) {
+  stop_gap_table <- read_csv_safe(robust_coef_file)
+  stop_gap_table <- stop_gap_table[
+    stop_gap_table$model == "m3_education_stopped_covid" &
+      (stop_gap_table$term == "parent_low_edu" | stop_gap_table$status != "estimated"),
+    c("scenario_id", "split_rule", "split_threshold", "use_weights", "estimate", "std.error", "p.value", "n_used", "status", "support_reason")
+  ]
+  scenario_labels <- c(
+    baseline_weighted_median = "Weighted median split",
+    unweighted_median = "Unweighted median split",
+    weighted_leq11 = "Weighted <=11 years split",
+    weighted_leq9 = "Weighted <=9 years split",
+    weighted_median_maxparent = "Weighted median split (max-parent proxy)"
+  )
+  stop_gap_table$Scenario <- unname(scenario_labels[stop_gap_table$scenario_id])
+  stop_gap_table$Estimate <- fmt_num(stop_gap_table$estimate)
+  stop_gap_table$`Std. Error` <- fmt_num(stop_gap_table$std.error)
+  stop_gap_table$`P-value` <- vapply(stop_gap_table$p.value, fmt_p, character(1))
+
+  knitr::kable(
+    stop_gap_table[, c("Scenario", "split_threshold", "Estimate", "Std. Error", "P-value", "n_used", "status", "support_reason")],
+    col.names = c("Scenario", "Threshold", "Log-odds estimate", "Std. Error", "P-value", "Used N", "Status", "Support diagnostics")
+  )
+} else {
+  data.frame(note = "Module C stoppage fragility diagnostics are not available yet.")
+}
+```
+
+## H. HBS Linkage Diagnostics
+
+The HBS linkage rule is intentionally conservative. An adult aged 25-64 is treated as linkable only if the respondent is coded as a co-resident child of the household head and at least one parental-generation education measure can be recovered from the head/spouse structure with a minimum 12-year age gap. This produces a selective co-resident sample rather than a population-representative intergenerational sample, so the diagnostics are reported before any supplemental HBS model is considered.
+
+```{r}
+#| label: tbl-hbs-linkage-overview
+#| tbl-cap: "Overview of the conservative HBS co-resident linkage rule."
+hbs_linkage_overview_file <- file.path("..", "outputs", "tables", "hbs_linkage_overview.csv")
+hbs_linkage_selection_file <- file.path("..", "outputs", "tables", "hbs_linkage_selection.csv")
+hbs_linkage_parent_file <- file.path("..", "outputs", "tables", "hbs_linkage_parent_measure_availability.csv")
+hbs_linkage_diag_file <- file.path("..", "data", "processed", "hbs_linkage_diagnostics.csv")
+
+hbs_linkage_overview <- if (file.exists(hbs_linkage_overview_file)) read_csv_safe(hbs_linkage_overview_file) else data.frame(note = "HBS linkage overview not available.")
+hbs_linkage_selection <- if (file.exists(hbs_linkage_selection_file)) read_csv_safe(hbs_linkage_selection_file) else data.frame(note = "HBS linkage selection diagnostics not available.")
+hbs_linkage_parent <- if (file.exists(hbs_linkage_parent_file)) read_csv_safe(hbs_linkage_parent_file) else data.frame(note = "HBS parent-measure availability diagnostics not available.")
+hbs_linkage_diag <- if (file.exists(hbs_linkage_diag_file)) read_csv_safe(hbs_linkage_diag_file) else data.frame(note = "HBS linkage diagnostics not available.")
+
+if ("metric" %in% names(hbs_linkage_overview)) {
+  overview_table <- hbs_linkage_overview
+  overview_table$value <- ifelse(grepl("Percent|Share", overview_table$metric), fmt_pct(overview_table$value), format(as.integer(round(overview_table$value)), big.mark = ","))
+  knitr::kable(overview_table, col.names = c("Diagnostic", "Value"))
+} else {
+  hbs_linkage_overview
+}
+```
+
+```{r}
+#| label: tbl-hbs-linkage-selection
+#| tbl-cap: "Selection diagnostics for the linked HBS adult sample."
+if ("metric" %in% names(hbs_linkage_selection)) {
+  selection_table <- hbs_linkage_selection
+  selection_table$full_sample <- ifelse(selection_table$metric == "Mean age", fmt_num(selection_table$full_sample), fmt_pct(selection_table$full_sample))
+  selection_table$linked_sample <- ifelse(selection_table$metric == "Mean age", fmt_num(selection_table$linked_sample), fmt_pct(selection_table$linked_sample))
+  knitr::kable(selection_table, col.names = c("Diagnostic", "Group", "Full adult sample", "Linked sample"))
+} else {
+  hbs_linkage_selection
+}
+```
+
+```{r}
+#| label: tbl-hbs-parent-measure-availability
+#| tbl-cap: "Parental-measure availability within the linked HBS adult sample."
+if ("parent_measure_category" %in% names(hbs_linkage_parent)) {
+  parent_table <- hbs_linkage_parent
+  parent_table$share <- fmt_pct(parent_table$share)
+  knitr::kable(parent_table, col.names = c("Parent-measure category", "N", "Share of adults 25-64"))
+} else {
+  hbs_linkage_parent
+}
+```
+
+```{r}
+if ("model_justified" %in% names(hbs_linkage_diag)) {
+  linkage_note <- if (isTRUE(as.logical(hbs_linkage_diag$model_justified[1]))) {
+    "The diagnostics clear the minimum thresholds for a selective supplemental HBS model."
+  } else {
+    "The diagnostics do not justify supplemental HBS intergenerational estimation: the linked sample is too selective relative to the full adult sample."
+  }
+  data.frame(note = linkage_note)
+} else {
+  data.frame(note = "HBS linkage diagnostics summary is not available.")
+}
+```
+
+## I. HBS Supplemental Co-resident Models (Conditional)
+
+```{r}
+#| label: tbl-hbs-conditional-model
+#| tbl-cap: "Conditional HBS co-resident model, reported only if the diagnostic thresholds justify estimation."
+hbs_model_status_file <- file.path("..", "outputs", "tables", "hbs_appendix_model_status.csv")
+hbs_model_coef_file <- file.path("..", "outputs", "tables", "hbs_appendix_model_coefficients.csv")
+
+hbs_model_status <- if (file.exists(hbs_model_status_file)) read_csv_safe(hbs_model_status_file) else data.frame(note = "HBS appendix model status not available.")
+hbs_model_coef <- if (file.exists(hbs_model_coef_file)) read_csv_safe(hbs_model_coef_file) else data.frame(note = "HBS appendix model coefficients not available.")
+
+if ("model_run" %in% names(hbs_model_status) && !isTRUE(as.logical(hbs_model_status$model_run[1]))) {
+  data.frame(note = hbs_model_status$note[1])
+} else if ("estimate" %in% names(hbs_model_coef)) {
+  model_table <- hbs_model_coef[, c("term", "estimate", "std.error", "p.value")]
+  model_table$estimate <- fmt_num(model_table$estimate)
+  model_table$std.error <- fmt_num(model_table$std.error)
+  model_table$p.value <- vapply(model_table$p.value, fmt_p, character(1))
+  knitr::kable(model_table, col.names = c("Term", "Estimate", "Std. Error", "P-value"))
+} else {
+  data.frame(note = "No supplemental HBS co-resident model is reported.")
+}
+```

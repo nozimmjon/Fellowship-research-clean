@@ -1,0 +1,85 @@
+admin_region,cohort_exposure_group,low_parent_education,n
+Andijan region,full_overlap_4,0.0,58
+Andijan region,full_overlap_4,1.0,36
+Andijan region,partial_overlap_1_2,0.0,80
+Andijan region,partial_overlap_1_2,1.0,45
+Andijan region,partial_overlap_3,0.0,50
+Andijan region,partial_overlap_3,1.0,26
+Bukhara region,full_overlap_4,0.0,59
+Bukhara region,full_overlap_4,1.0,37
+Bukhara region,partial_overlap_1_2,0.0,55
+Bukhara region,partial_overlap_1_2,1.0,36
+Bukhara region,partial_overlap_3,0.0,41
+Bukhara region,partial_overlap_3,1.0,33
+Fergana region,full_overlap_4,0.0,76
+Fergana region,full_overlap_4,1.0,13
+Fergana region,partial_overlap_1_2,0.0,100
+Fergana region,partial_overlap_1_2,1.0,11
+Fergana region,partial_overlap_3,0.0,68
+Fergana region,partial_overlap_3,1.0,6
+Jizzakh region,full_overlap_4,0.0,63
+Jizzakh region,full_overlap_4,1.0,78
+Jizzakh region,partial_overlap_1_2,0.0,41
+Jizzakh region,partial_overlap_1_2,1.0,81
+Jizzakh region,partial_overlap_3,0.0,30
+Jizzakh region,partial_overlap_3,1.0,51
+Kashkadarya region,full_overlap_4,0.0,90
+Kashkadarya region,full_overlap_4,1.0,23
+Kashkadarya region,partial_overlap_1_2,0.0,96
+Kashkadarya region,partial_overlap_1_2,1.0,26
+Kashkadarya region,partial_overlap_3,0.0,61
+Kashkadarya region,partial_overlap_3,1.0,20
+Khorezm region,full_overlap_4,0.0,72
+Khorezm region,full_overlap_4,1.0,48
+Khorezm region,partial_overlap_1_2,0.0,74
+Khorezm region,partial_overlap_1_2,1.0,36
+Khorezm region,partial_overlap_3,0.0,56
+Khorezm region,partial_overlap_3,1.0,26
+Namangan region,full_overlap_4,0.0,50
+Namangan region,full_overlap_4,1.0,37
+Namangan region,partial_overlap_1_2,0.0,49
+Namangan region,partial_overlap_1_2,1.0,42
+Namangan region,partial_overlap_3,0.0,36
+Namangan region,partial_overlap_3,1.0,25
+Navoi region,full_overlap_4,0.0,52
+Navoi region,full_overlap_4,1.0,31
+Navoi region,partial_overlap_1_2,0.0,60
+Navoi region,partial_overlap_1_2,1.0,27
+Navoi region,partial_overlap_3,0.0,45
+Navoi region,partial_overlap_3,1.0,24
+Republic of Karakalpakstan,full_overlap_4,0.0,103
+Republic of Karakalpakstan,full_overlap_4,1.0,26
+Republic of Karakalpakstan,partial_overlap_1_2,0.0,115
+Republic of Karakalpakstan,partial_overlap_1_2,1.0,14
+Republic of Karakalpakstan,partial_overlap_3,0.0,83
+Republic of Karakalpakstan,partial_overlap_3,1.0,21
+Samarkand region,full_overlap_4,0.0,57
+Samarkand region,full_overlap_4,1.0,75
+Samarkand region,partial_overlap_1_2,0.0,64
+Samarkand region,partial_overlap_1_2,1.0,67
+Samarkand region,partial_overlap_3,0.0,33
+Samarkand region,partial_overlap_3,1.0,46
+Surkhandarya region,full_overlap_4,0.0,72
+Surkhandarya region,full_overlap_4,1.0,28
+Surkhandarya region,partial_overlap_1_2,0.0,72
+Surkhandarya region,partial_overlap_1_2,1.0,31
+Surkhandarya region,partial_overlap_3,0.0,63
+Surkhandarya region,partial_overlap_3,1.0,23
+Syrdarya region,full_overlap_4,0.0,83
+Syrdarya region,full_overlap_4,1.0,11
+Syrdarya region,partial_overlap_1_2,0.0,90
+Syrdarya region,partial_overlap_1_2,1.0,16
+Syrdarya region,partial_overlap_3,0.0,58
+Syrdarya region,partial_overlap_3,1.0,9
+Tashkent city,full_overlap_4,0.0,52
+Tashkent city,full_overlap_4,1.0,6
+Tashkent city,partial_overlap_1_2,0.0,72
+Tashkent city,partial_overlap_1_2,1.0,5
+Tashkent city,partial_overlap_3,0.0,53
+Tashkent city,partial_overlap_3,1.0,10
+Tashkent region,full_overlap_4,0.0,102
+Tashkent region,full_overlap_4,1.0,61
+Tashkent region,partial_overlap_1_2,0.0,73
+Tashkent region,partial_overlap_1_2,1.0,46
+Tashkent region,partial_overlap_3,0.0,65
+Tashkent region,partial_overlap_3,1.0,29

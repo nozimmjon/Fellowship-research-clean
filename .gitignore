@@ -1,0 +1,72 @@
+/.Rhistory
+/.RData
+/.Ruserdata
+/.DS_Store
+/.Rproj.user
+/.httr-oauth
+/.quarto/
+/.tmp/
+/.home/
+/_targets/
+
+/r_libs/
+/renv/library/
+/renv/python/
+/renv/staging/
+/renv/cache/
+
+/data/raw/*
+!/data/raw/.gitkeep
+!/data/raw/README.md
+!/data/raw/admin/
+!/data/raw/hbs/
+!/data/raw/lits/
+/data/raw/admin/*
+!/data/raw/admin/.gitkeep
+/data/raw/hbs/*
+!/data/raw/hbs/.gitkeep
+/data/raw/lits/*
+!/data/raw/lits/.gitkeep
+
+/data/processed/*
+!/data/processed/.gitkeep
+!/data/processed/*.csv
+
+/outputs/*
+!/outputs/.gitkeep
+!/outputs/tables/
+!/outputs/tables/**
+!/outputs/figures/
+!/outputs/figures/.gitkeep
+!/outputs/figures/*.png
+
+# Exploratory raw/intermediate artifacts should stay local.
+/archive/exploratory/**/_tmp_*
+/archive/exploratory/**/*.parquet
+/archive/exploratory/**/*.feather
+/archive/exploratory/**/*.fst
+/archive/exploratory/**/*.rds
+/archive/exploratory/**/*.dta
+/archive/exploratory/**/*.sav
+/archive/exploratory/**/tables/*.log
+
+*.quarto_ipynb
+
+**/*.quarto_ipynb
+.tmp_raw_rebuild*/
+*.log
+reports/*.tex
+reports/*_files/
+
+# Policy brief iterations (root-level)
+/policy_brief_v*.pdf
+/policy_brief_page_*.png
+
+# Local deck/export artifacts
+/Policy brief.zip
+/Uzbekistan Higher Education Deck v*.html
+/deck-stage.js
+/scripts/render_deck_supporting_figures.R
+
+# Claude Code worktrees
+/.claude/worktrees/

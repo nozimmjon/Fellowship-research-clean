@@ -1,0 +1,71 @@
+sample_label,outcome_name,variable_name,metric_type,survey_year,sample_n,non_missing_n,non_missing_share,weighted_metric
+full_linked,current enrollment in any education,current_enrollment_any,binary,2021,3627,3627,1.0,0.26136985132886953
+full_linked,current enrollment in any education,current_enrollment_any,binary,2022,0,0,,
+full_linked,current enrollment in any education,current_enrollment_any,binary,2023,0,0,,
+full_linked,current enrollment in any education,current_enrollment_any,binary,2024,0,0,,
+full_linked,current enrollment in any education,current_enrollment_any,binary,2025,4597,4597,1.0,0.3914128830488339
+full_linked,current enrollment in tertiary education,tertiary_enrolled_proxy,binary,2021,3627,3627,1.0,0.007221506619248397
+full_linked,current enrollment in tertiary education,tertiary_enrolled_proxy,binary,2022,0,0,,
+full_linked,current enrollment in tertiary education,tertiary_enrolled_proxy,binary,2023,0,0,,
+full_linked,current enrollment in tertiary education,tertiary_enrolled_proxy,binary,2024,0,0,,
+full_linked,current enrollment in tertiary education,tertiary_enrolled_proxy,binary,2025,4597,4597,1.0,0.008847439715194184
+full_linked,tertiary completion,tertiary_completed_proxy,binary,2021,3627,3627,1.0,0.01900140644488677
+full_linked,tertiary completion,tertiary_completed_proxy,binary,2022,0,0,,
+full_linked,tertiary completion,tertiary_completed_proxy,binary,2023,0,0,,
+full_linked,tertiary completion,tertiary_completed_proxy,binary,2024,0,0,,
+full_linked,tertiary completion,tertiary_completed_proxy,binary,2025,4597,4597,1.0,0.06912474976374143
+full_linked,years of schooling,education_years,continuous,2021,3627,3627,1.0,11.859303426125154
+full_linked,years of schooling,education_years,continuous,2022,0,0,,
+full_linked,years of schooling,education_years,continuous,2023,0,0,,
+full_linked,years of schooling,education_years,continuous,2024,0,0,,
+full_linked,years of schooling,education_years,continuous,2025,4597,4597,1.0,11.912530432866667
+full_linked,completed upper secondary or more,completed_upper_secondary_or_more,binary,2021,3627,3627,1.0,0.9668035117318409
+full_linked,completed upper secondary or more,completed_upper_secondary_or_more,binary,2022,0,0,,
+full_linked,completed upper secondary or more,completed_upper_secondary_or_more,binary,2023,0,0,,
+full_linked,completed upper secondary or more,completed_upper_secondary_or_more,binary,2024,0,0,,
+full_linked,completed upper secondary or more,completed_upper_secondary_or_more,binary,2025,4597,4597,1.0,0.9686930808106529
+full_linked,post-secondary / tertiary entry proxy,post_secondary_entry_proxy,binary,2021,3627,3627,1.0,0.23529252619467314
+full_linked,post-secondary / tertiary entry proxy,post_secondary_entry_proxy,binary,2022,0,0,,
+full_linked,post-secondary / tertiary entry proxy,post_secondary_entry_proxy,binary,2023,0,0,,
+full_linked,post-secondary / tertiary entry proxy,post_secondary_entry_proxy,binary,2024,0,0,,
+full_linked,post-secondary / tertiary entry proxy,post_secondary_entry_proxy,binary,2025,4597,4597,1.0,0.36409891826995255
+full_linked,upward mobility proxy,upward_mobility_proxy,binary,2021,3627,3627,1.0,0.3340411790025926
+full_linked,upward mobility proxy,upward_mobility_proxy,binary,2022,0,0,,
+full_linked,upward mobility proxy,upward_mobility_proxy,binary,2023,0,0,,
+full_linked,upward mobility proxy,upward_mobility_proxy,binary,2024,0,0,,
+full_linked,upward mobility proxy,upward_mobility_proxy,binary,2025,4597,4597,1.0,0.25817457059777854
+no_migration_signal,current enrollment in any education,current_enrollment_any,binary,2021,0,0,,
+no_migration_signal,current enrollment in any education,current_enrollment_any,binary,2022,0,0,,
+no_migration_signal,current enrollment in any education,current_enrollment_any,binary,2023,0,0,,
+no_migration_signal,current enrollment in any education,current_enrollment_any,binary,2024,0,0,,
+no_migration_signal,current enrollment in any education,current_enrollment_any,binary,2025,4114,4114,1.0,0.42366076497773497
+no_migration_signal,current enrollment in tertiary education,tertiary_enrolled_proxy,binary,2021,0,0,,
+no_migration_signal,current enrollment in tertiary education,tertiary_enrolled_proxy,binary,2022,0,0,,
+no_migration_signal,current enrollment in tertiary education,tertiary_enrolled_proxy,binary,2023,0,0,,
+no_migration_signal,current enrollment in tertiary education,tertiary_enrolled_proxy,binary,2024,0,0,,
+no_migration_signal,current enrollment in tertiary education,tertiary_enrolled_proxy,binary,2025,4114,4114,1.0,0.008859477209375603
+no_migration_signal,tertiary completion,tertiary_completed_proxy,binary,2021,0,0,,
+no_migration_signal,tertiary completion,tertiary_completed_proxy,binary,2022,0,0,,
+no_migration_signal,tertiary completion,tertiary_completed_proxy,binary,2023,0,0,,
+no_migration_signal,tertiary completion,tertiary_completed_proxy,binary,2024,0,0,,
+no_migration_signal,tertiary completion,tertiary_completed_proxy,binary,2025,4114,4114,1.0,0.07321973421649686
+no_migration_signal,years of schooling,education_years,continuous,2021,0,0,,
+no_migration_signal,years of schooling,education_years,continuous,2022,0,0,,
+no_migration_signal,years of schooling,education_years,continuous,2023,0,0,,
+no_migration_signal,years of schooling,education_years,continuous,2024,0,0,,
+no_migration_signal,years of schooling,education_years,continuous,2025,4114,4114,1.0,11.942044563403108
+no_migration_signal,completed upper secondary or more,completed_upper_secondary_or_more,binary,2021,0,0,,
+no_migration_signal,completed upper secondary or more,completed_upper_secondary_or_more,binary,2022,0,0,,
+no_migration_signal,completed upper secondary or more,completed_upper_secondary_or_more,binary,2023,0,0,,
+no_migration_signal,completed upper secondary or more,completed_upper_secondary_or_more,binary,2024,0,0,,
+no_migration_signal,completed upper secondary or more,completed_upper_secondary_or_more,binary,2025,4114,4114,1.0,0.9650644370239486
+no_migration_signal,post-secondary / tertiary entry proxy,post_secondary_entry_proxy,binary,2021,0,0,,
+no_migration_signal,post-secondary / tertiary entry proxy,post_secondary_entry_proxy,binary,2022,0,0,,
+no_migration_signal,post-secondary / tertiary entry proxy,post_secondary_entry_proxy,binary,2023,0,0,,
+no_migration_signal,post-secondary / tertiary entry proxy,post_secondary_entry_proxy,binary,2024,0,0,,
+no_migration_signal,post-secondary / tertiary entry proxy,post_secondary_entry_proxy,binary,2025,4114,4114,1.0,0.3932312486923739
+no_migration_signal,upward mobility proxy,upward_mobility_proxy,binary,2021,0,0,,
+no_migration_signal,upward mobility proxy,upward_mobility_proxy,binary,2022,0,0,,
+no_migration_signal,upward mobility proxy,upward_mobility_proxy,binary,2023,0,0,,
+no_migration_signal,upward mobility proxy,upward_mobility_proxy,binary,2024,0,0,,
+no_migration_signal,upward mobility proxy,upward_mobility_proxy,binary,2025,4114,4114,1.0,0.2571237119895265

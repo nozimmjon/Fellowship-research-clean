@@ -1,0 +1,4 @@
+module,parent_measure,aggregation_rule,interpretation_note
+Module A,Parental education category and years,"Higher observed parent category; if only one parent is observed, retain the observed parent.",Supports cross-wave descriptive comparability with limited attrition from one-parent reports.
+Module B,Parental education score and parental rank,Same max-parent harmonization used in Module A.,Keeps the pooled associational models anchored to the main descriptive parent measure.
+Module C,Mean observed parent years for low-vs-high split,Average observed mother and father years within the child-module sample.,Used because the max-parent weighted median split is support-degenerate in the small child-module sample.

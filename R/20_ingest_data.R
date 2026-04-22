@@ -1,0 +1,762 @@
+select_existing_file <- function(candidates) {
+  hits <- candidates[file.exists(candidates)]
+  if (length(hits) == 0) {
+    return(NA_character_)
+  }
+  hits[[1]]
+}
+
+lits_source_candidates <- function(raw_dir) {
+  list(
+    `2010` = c(
+      file.path(raw_dir, "lits_ii.csv"),
+      file.path(raw_dir, "lits2.dta")
+    ),
+    `2016` = c(
+      file.path(raw_dir, "lits_iii.dta"),
+      file.path(raw_dir, "lits_iii.csv")
+    ),
+    `2022` = c(
+      file.path(raw_dir, "lits_iv_dta", "lits_iv.dta"),
+      file.path(raw_dir, "lits_iv_dta", "lits_iv.csv")
+    )
+  )
+}
+
+build_lits_input_inventory <- function(raw_dir = file.path(PROJ_PATHS$raw_data, "lits")) {
+  candidates <- lits_source_candidates(raw_dir)
+  tibble::tibble(
+    wave_year = as.integer(names(candidates)),
+    expected_paths = vapply(candidates, function(x) paste(x, collapse = " | "), character(1)),
+    found_path = vapply(candidates, select_existing_file, character(1))
+  )
+}
+
+assert_required_lits_inputs <- function(raw_dir = file.path(PROJ_PATHS$raw_data, "lits")) {
+  inventory <- build_lits_input_inventory(raw_dir)
+  missing <- inventory[is.na(inventory$found_path), , drop = FALSE]
+
+  if (nrow(missing) > 0) {
+    missing_msg <- paste0(
+      "  - LiTS ", missing$wave_year, ": ", missing$expected_paths,
+      collapse = "\n"
+    )
+    stop(
+      paste(
+        "Required LiTS raw inputs were not found.",
+        paste0("Raw data root checked: ", normalizePath(raw_dir, winslash = "/", mustWork = FALSE)),
+        "Expected one source file per wave. Missing wave candidates:",
+        missing_msg,
+        "Set FELLOWSHIP_RAW_DATA_ROOT or place the files under data/raw/lits/ before running the pipeline.",
+        sep = "\n"
+      ),
+      call. = FALSE
+    )
+  }
+
+  invisible(inventory)
+}
+
+read_any_table <- function(path) {
+  ext <- tolower(tools::file_ext(path))
+  if (ext == "csv") {
+    return(readr::read_csv(path, show_col_types = FALSE, progress = FALSE))
+  }
+  if (ext %in% c("xlsx", "xls")) {
+    return(readxl::read_excel(path))
+  }
+  if (ext == "dta") {
+    return(haven::read_dta(path))
+  }
+  if (ext == "sav") {
+    return(haven::read_sav(path))
+  }
+  stop("Unsupported file type: ", ext)
+}
+
+read_source_with_columns <- function(path, columns) {
+  ext <- tolower(tools::file_ext(path))
+  if (ext == "csv") {
+    return(readr::read_csv(
+      path,
+      col_select = dplyr::any_of(columns),
+      show_col_types = FALSE,
+      progress = FALSE
+    ))
+  }
+  if (ext == "dta") {
+    d <- haven::read_dta(path)
+    # Case-insensitive column matching: .dta files may use different casing
+    dta_names_lower <- tolower(names(d))
+    keep_idx <- integer(0)
+    rename_from <- character(0)
+    rename_to <- character(0)
+    for (col in columns) {
+      idx <- match(tolower(col), dta_names_lower)
+      if (!is.na(idx)) {
+        keep_idx <- c(keep_idx, idx)
+        if (names(d)[idx] != col) {
+          rename_from <- c(rename_from, names(d)[idx])
+          rename_to <- c(rename_to, col)
+        }
+      }
+    }
+    d <- d[, unique(keep_idx), drop = FALSE]
+    for (i in seq_along(rename_from)) {
+      names(d)[names(d) == rename_from[i]] <- rename_to[i]
+    }
+    return(d)
+  }
+  stop("Unsupported LiTS source type: ", ext)
+}
+
+ensure_columns <- function(df, columns) {
+  out <- df
+  missing_cols <- setdiff(columns, names(out))
+  if (length(missing_cols) > 0) {
+    for (nm in missing_cols) {
+      out[[nm]] <- NA
+    }
+  }
+  out
+}
+
+infer_wave_from_filename <- function(path) {
+  nm <- tolower(basename(path))
+  dplyr::case_when(
+    stringr::str_detect(nm, "lits2|lits_ii") ~ 2010L,
+    stringr::str_detect(nm, "lits_iii") ~ 2016L,
+    stringr::str_detect(nm, "lits_iv|2022|2023") ~ 2022L,
+    stringr::str_detect(nm, "2010") ~ 2010L,
+    stringr::str_detect(nm, "2016") ~ 2016L,
+    TRUE ~ NA_integer_
+  )
+}
+
+clean_numeric <- function(x) {
+  out <- suppressWarnings(as.numeric(x))
+  out[out < 0] <- NA_real_
+  out
+}
+
+as_label_text <- function(x) {
+  if (inherits(x, "haven_labelled")) {
+    return(as.character(haven::as_factor(x)))
+  }
+  as.character(x)
+}
+
+map_education_level <- function(x) {
+  x <- tolower(trimws(as.character(x)))
+  x_norm <- gsub("_+", "_", gsub("[[:space:]-]+", "_", x))
+  dplyr::case_when(
+    x_norm %in% EDUCATION_LEVELS ~ x_norm,
+    # LiTS II numeric codes (q515): 0/1=No degree, 2=Primary, 3=Lower secondary,
+    # 4=Upper secondary, 5=Post-secondary non-tertiary, 6=Tertiary (not univ), 7=University+
+    x %in% c("0", "1") ~ "no_formal",
+    x %in% c("2") ~ "primary",
+    x %in% c("3") ~ "lower_secondary",
+    x %in% c("4") ~ "upper_secondary",
+    x %in% c("5") ~ "post_secondary_non_tertiary",
+    x %in% c("6", "7") ~ "tertiary",
+    stringr::str_detect(x, "master|phd|bachelor|tertiary education \\(not a university|tertiary") ~ "tertiary",
+    stringr::str_detect(x, "post-secondary non-tertiary|post-secondary non tertiary|post secondary non tertiary|post_secondary_non_tertiary") ~ "post_secondary_non_tertiary",
+    stringr::str_detect(x, "upper") ~ "upper_secondary",
+    stringr::str_detect(x, "lower") ~ "lower_secondary",
+    stringr::str_detect(x, "primary") ~ "primary",
+    stringr::str_detect(x, "no degree|no education|no formal|no_formal") ~ "no_formal",
+    TRUE ~ NA_character_
+  )
+}
+
+education_level_to_years <- function(level) {
+  dplyr::case_when(
+    level == "no_formal" ~ 0,
+    level == "primary" ~ 6,
+    level == "lower_secondary" ~ 9,
+    level == "upper_secondary" ~ 11,
+    level == "post_secondary_non_tertiary" ~ 13,
+    level == "tertiary" ~ 16,
+    TRUE ~ NA_real_
+  )
+}
+
+years_to_education_level <- function(years) {
+  y <- suppressWarnings(as.numeric(years))
+  dplyr::case_when(
+    is.na(y) ~ NA_character_,
+    y < 1 ~ "no_formal",
+    y < 7 ~ "primary",
+    y < 10 ~ "lower_secondary",
+    y < 13 ~ "upper_secondary",
+    y < 15 ~ "post_secondary_non_tertiary",
+    TRUE ~ "tertiary"
+  )
+}
+
+parent_max_level <- function(father_level, mother_level) {
+  f_idx <- match(father_level, EDUCATION_LEVELS)
+  m_idx <- match(mother_level, EDUCATION_LEVELS)
+  idx <- pmax(
+    dplyr::if_else(is.na(f_idx), -Inf, as.numeric(f_idx)),
+    dplyr::if_else(is.na(m_idx), -Inf, as.numeric(m_idx))
+  )
+  out <- rep(NA_character_, length(idx))
+  valid <- is.finite(idx)
+  out[valid] <- EDUCATION_LEVELS[idx[valid]]
+  out
+}
+
+coerce_urban_binary <- function(x) {
+  x <- tolower(as.character(x))
+  dplyr::case_when(
+    x %in% c("urban", "1", "1 [urban]", "1 [urbanity status]") ~ 1L,
+    x %in% c("rural", "2", "2 [rural]", "2 [rurality status]") ~ 0L,
+    stringr::str_detect(x, "urban") ~ 1L,
+    stringr::str_detect(x, "rural") ~ 0L,
+    TRUE ~ NA_integer_
+  )
+}
+
+coerce_gender_label <- function(x) {
+  x <- tolower(as.character(x))
+  dplyr::case_when(
+    x %in% c("2", "female", "2 [female]") ~ "female",
+    x %in% c("1", "male", "1 [male]") ~ "male",
+    stringr::str_detect(x, "\\bfemale\\b|woman|girl") ~ "female",
+    stringr::str_detect(x, "\\bmale\\b|man|boy") ~ "male",
+    TRUE ~ NA_character_
+  )
+}
+
+# Locked cross-wave mapping for Uzbekistan LiTS region labels.
+UZB_REGION_HARMONIZATION_MAP <- c(
+  "andijan" = "Andijan region",
+  "andijanregion" = "Andijan region",
+  "bukhara" = "Bukhara region",
+  "bukharaoblast" = "Bukhara region",
+  "bukhararegion" = "Bukhara region",
+  "djizakoblast" = "Jizzakh region",
+  "djizakregion" = "Jizzakh region",
+  "jizzakoblast" = "Jizzakh region",
+  "jizzakhoblast" = "Jizzakh region",
+  "jizzakregion" = "Jizzakh region",
+  "jizzakhregion" = "Jizzakh region",
+  "fergana" = "Fergana region",
+  "ferganaregion" = "Fergana region",
+  "karakalpakistanar" = "Karakalpakstan republic",
+  "karakalpakstan" = "Karakalpakstan republic",
+  "karakalpakstanregion" = "Karakalpakstan republic",
+  "karakalpakstanar" = "Karakalpakstan republic",
+  "kashkadarya" = "Kashkadarya region",
+  "kashkadaryaregion" = "Kashkadarya region",
+  "qashqadaryo" = "Kashkadarya region",
+  "khorezm" = "Khorezm region",
+  "khorezmoblast" = "Khorezm region",
+  "khorezmregion" = "Khorezm region",
+  "namangan" = "Namangan region",
+  "namanganoblast" = "Namangan region",
+  "namanganregion" = "Namangan region",
+  "navoi" = "Navoi region",
+  "navoioblast" = "Navoi region",
+  "navoiregion" = "Navoi region",
+  "navoiy" = "Navoi region",
+  "samarkand" = "Samarkand region",
+  "samarkandoblast" = "Samarkand region",
+  "samarkandregion" = "Samarkand region",
+  "sirdarya" = "Sirdarya region",
+  "sirdaryaoblast" = "Sirdarya region",
+  "sirdaryaregion" = "Sirdarya region",
+  "syrdarya" = "Sirdarya region",
+  "syrdaryaoblast" = "Sirdarya region",
+  "syrdaryaregion" = "Sirdarya region",
+  "surkhandarya" = "Surkhandarya region",
+  "surkhandaryaregion" = "Surkhandarya region",
+  "tashkent" = "Tashkent city",
+  "tashkentcity" = "Tashkent city",
+  "tashkentoblast" = "Tashkent region",
+  "tashkentregion" = "Tashkent region"
+)
+
+region_label_key <- function(x) {
+  x_chr <- tolower(trimws(as.character(x)))
+  x_chr <- stringr::str_replace_all(x_chr, "[^a-z]", "")
+  dplyr::na_if(x_chr, "")
+}
+
+harmonize_uzbekistan_region <- function(region) {
+  region_chr <- trimws(as.character(region))
+  key <- region_label_key(region_chr)
+  mapped <- unname(UZB_REGION_HARMONIZATION_MAP[key])
+  dplyr::case_when(
+    is.na(region_chr) | region_chr == "" ~ NA_character_,
+    !is.na(mapped) ~ mapped,
+    TRUE ~ region_chr
+  )
+}
+
+yes_no_to_binary <- function(x) {
+  x <- tolower(trimws(as.character(x)))
+  dplyr::case_when(
+    x == "yes" ~ 1L,
+    x == "no" ~ 0L,
+    TRUE ~ NA_integer_
+  )
+}
+
+# Flag households containing both a child (<=17) and an older adult (>=60) among
+# roster members, as a proxy for multigenerational co-residence.  Thresholds follow
+# standard demographic conventions: 17 = pre-adult, 60 = elderly per UN/Uzbek norms.
+build_multigenerational_proxy <- function(df, age_cols, child_max_age = 17, older_min_age = 60) {
+  age_cols <- intersect(age_cols, names(df))
+  if (length(age_cols) == 0) {
+    return(rep(NA_integer_, nrow(df)))
+  }
+
+  age_df <- df %>%
+    dplyr::select(dplyr::all_of(age_cols)) %>%
+    dplyr::mutate(dplyr::across(dplyr::everything(), clean_numeric))
+
+  age_mat <- as.matrix(age_df)
+  has_any_age <- rowSums(!is.na(age_mat)) > 0
+  has_child <- rowSums(!is.na(age_mat) & age_mat <= child_max_age) > 0
+  has_older <- rowSums(!is.na(age_mat) & age_mat >= older_min_age) > 0
+
+  out <- ifelse(has_any_age, as.integer(has_child & has_older), NA_integer_)
+  as.integer(out)
+}
+
+extract_roster_value_by_code <- function(code, values) {
+  idx <- suppressWarnings(as.integer(code))
+  out <- rep(NA, length(idx))
+  for (j in seq_along(values)) {
+    hit <- !is.na(idx) & idx == j
+    if (any(hit)) {
+      out[hit] <- values[[j]][hit]
+    }
+  }
+  out
+}
+
+age_from_band <- function(x) {
+  x <- as.character(x)
+  dplyr::case_when(
+    x == "18-24" ~ 21,
+    x == "25-34" ~ 30,
+    x == "35-44" ~ 40,
+    x == "45-54" ~ 50,
+    x == "55-64" ~ 60,
+    x == "65+" ~ 68,
+    TRUE ~ NA_real_
+  )
+}
+
+assign_cohort <- function(age) {
+  dplyr::case_when(
+    age >= 25 & age <= 34 ~ "25-34",
+    age >= 35 & age <= 44 ~ "35-44",
+    age >= 45 & age <= 54 ~ "45-54",
+    age >= 55 & age <= 64 ~ "55-64",
+    TRUE ~ NA_character_
+  )
+}
+
+as_harmonized_frame <- function(
+  wave_year,
+  country,
+  region,
+  age,
+  gender,
+  urban,
+  own_level,
+  parent_level,
+  own_years,
+  parent_years,
+  weight,
+  father_level = NULL,
+  mother_level = NULL,
+  father_years = NULL,
+  mother_years = NULL,
+  hh_income_proxy = NULL,
+  migration_exposure = NULL,
+  multigenerational_hh = NULL
+) {
+  n <- length(wave_year)
+  if (is.null(hh_income_proxy)) hh_income_proxy <- rep(NA_real_, n)
+  if (is.null(migration_exposure)) migration_exposure <- rep(NA_integer_, n)
+  if (is.null(multigenerational_hh)) multigenerational_hh <- rep(NA_integer_, n)
+  if (is.null(father_level)) father_level <- rep(NA_character_, n)
+  if (is.null(mother_level)) mother_level <- rep(NA_character_, n)
+  if (is.null(father_years)) father_years <- rep(NA_real_, n)
+  if (is.null(mother_years)) mother_years <- rep(NA_real_, n)
+
+  tibble::tibble(
+    wave_year = as.integer(wave_year),
+    country = as.character(country),
+    region = harmonize_uzbekistan_region(region),
+    age = clean_numeric(age),
+    gender = coerce_gender_label(gender),
+    urban = coerce_urban_binary(urban),
+    own_ed_level = map_education_level(own_level),
+    parent_ed_level = map_education_level(parent_level),
+    own_years_schooling = clean_numeric(own_years),
+    parent_years_schooling = clean_numeric(parent_years),
+    father_ed_level = map_education_level(father_level),
+    mother_ed_level = map_education_level(mother_level),
+    father_years_schooling = clean_numeric(father_years),
+    mother_years_schooling = clean_numeric(mother_years),
+    sample_weight = clean_numeric(weight),
+    hh_income_proxy = clean_numeric(hh_income_proxy),
+    migration_exposure = suppressWarnings(as.integer(migration_exposure)),
+    multigenerational_hh = suppressWarnings(as.integer(multigenerational_hh))
+  ) %>%
+    dplyr::mutate(
+      # Keep only strictly positive survey weights in the harmonized file.
+      sample_weight = dplyr::if_else(is.na(sample_weight) | sample_weight <= 0, NA_real_, sample_weight),
+      cohort = assign_cohort(age)
+    )
+}
+
+read_lits_2010 <- function(raw_dir) {
+  path <- select_existing_file(c(
+    file.path(raw_dir, "lits_ii.csv"),
+    file.path(raw_dir, "lits2.dta")
+  ))
+  if (is.na(path)) {
+    return(tibble::tibble())
+  }
+
+  source_cols <- c(
+    "country", "country0", "Region1", "Region2", "respondentage", "Select_0", "respondentgender",
+    "tablec", "q515", "q718", "q719", "q708",
+    "q104a_1", "q104a_2", "q104a_3", "q104a_4", "q104a_5", "q104a_6",
+    "q104a_7", "q104a_8", "q104a_9", "q104a_10", "q104a_11", "q104a_12",
+    "weight"
+  )
+  d <- read_source_with_columns(path, source_cols) %>%
+    ensure_columns(source_cols)
+
+  critical_cols <- c("country", "respondentgender", "q515", "q718", "q719", "weight")
+  missing_critical <- critical_cols[vapply(d[critical_cols], function(x) all(is.na(x)), logical(1))]
+  if (length(missing_critical) > 0) {
+    stop(
+      paste0(
+        "LiTS 2010 source is missing required columns or fully empty fields: ",
+        paste(missing_critical, collapse = ", "),
+        ". Source file: ",
+        path
+      ),
+      call. = FALSE
+    )
+  }
+
+  d <- d %>%
+    dplyr::mutate(
+      country_text = as_label_text(country)
+    ) %>%
+    dplyr::filter(grepl("Uzbekistan", country_text, ignore.case = TRUE)) %>%
+    dplyr::mutate(
+      age_final = dplyr::coalesce(clean_numeric(respondentage), age_from_band(Select_0)),
+      region_final = dplyr::coalesce(
+        dplyr::na_if(trimws(as_label_text(Region1)), ""),
+        dplyr::na_if(trimws(as_label_text(Region2)), ""),
+        dplyr::na_if(trimws(as_label_text(country0)), "")
+      ),
+      migration = yes_no_to_binary(q708),
+      own_level = map_education_level(as_label_text(q515)),
+      own_years = education_level_to_years(own_level),
+      father_years = clean_numeric(q718),
+      mother_years = clean_numeric(q719),
+      father_level = years_to_education_level(father_years),
+      mother_level = years_to_education_level(mother_years),
+      parent_level = parent_max_level(father_level, mother_level),
+      parent_years = education_level_to_years(parent_level),
+      multigen_proxy = build_multigenerational_proxy(
+        .,
+        age_cols = c("q104a_1", "q104a_2", "q104a_3", "q104a_4", "q104a_5", "q104a_6", "q104a_7", "q104a_8", "q104a_9", "q104a_10", "q104a_11", "q104a_12")
+      )
+    )
+
+  as_harmonized_frame(
+    wave_year = 2010L,
+    country = d$country,
+    region = d$region_final,
+    age = d$age_final,
+    gender = d$respondentgender,
+    urban = d$tablec,
+    own_level = d$own_level,
+    parent_level = d$parent_level,
+    own_years = d$own_years,
+    parent_years = d$parent_years,
+    weight = d$weight,
+    father_level = d$father_level,
+    mother_level = d$mother_level,
+    father_years = d$father_years,
+    mother_years = d$mother_years,
+    hh_income_proxy = NA_real_,
+    migration_exposure = d$migration,
+    multigenerational_hh = d$multigen_proxy
+  )
+}
+
+read_lits_2016 <- function(raw_dir) {
+  path <- select_existing_file(c(
+    file.path(raw_dir, "lits_iii.dta"),
+    file.path(raw_dir, "lits_iii.csv")
+  ))
+  if (is.na(path)) {
+    return(tibble::tibble())
+  }
+
+  if (tolower(tools::file_ext(path)) == "dta") {
+      d <- haven::read_dta(
+      path,
+      col_select = c(country, region_name, age_pr, gender_pr, urban, q109_1, q110_1, q111_1, q223, q912, q105_1, q105_2, q105_3, q105_4, q105_5, q105_6, q105_7, q105_8, q105_9, q105_10, weight_population)
+    ) %>%
+      dplyr::mutate(
+        country = as.character(country),
+        own_cat = as_label_text(q109_1),
+        father_cat = as_label_text(q110_1),
+        mother_cat = as_label_text(q111_1),
+        migration = yes_no_to_binary(as_label_text(q912)),
+        hh_income_raw = clean_numeric(q223),
+        gender = as_label_text(gender_pr),
+        urban_raw = as_label_text(urban),
+        multigen_proxy = build_multigenerational_proxy(
+          .,
+          age_cols = c("q105_1", "q105_2", "q105_3", "q105_4", "q105_5", "q105_6", "q105_7", "q105_8", "q105_9", "q105_10")
+        )
+      ) %>%
+      dplyr::filter(country == "Uzbekistan")
+  } else {
+    d <- readr::read_csv(
+      path,
+      col_select = c("country", "region_name", "age_pr", "gender_pr", "urban", "q109_1", "q110_1", "q111_1", "q223", "q912", "q105_1", "q105_2", "q105_3", "q105_4", "q105_5", "q105_6", "q105_7", "q105_8", "q105_9", "q105_10", "weight_population"),
+      show_col_types = FALSE,
+      progress = FALSE
+    ) %>%
+      dplyr::mutate(
+        own_cat = as.character(q109_1),
+        father_cat = as.character(q110_1),
+        mother_cat = as.character(q111_1),
+        migration = yes_no_to_binary(q912),
+        hh_income_raw = clean_numeric(q223),
+        gender = as.character(gender_pr),
+        urban_raw = as.character(urban),
+        multigen_proxy = build_multigenerational_proxy(
+          .,
+          age_cols = c("q105_1", "q105_2", "q105_3", "q105_4", "q105_5", "q105_6", "q105_7", "q105_8", "q105_9", "q105_10")
+        )
+      ) %>%
+      dplyr::filter(country == "Uzbekistan")
+  }
+
+  d <- d %>%
+    dplyr::mutate(
+      own_level = map_education_level(own_cat),
+      father_level = map_education_level(father_cat),
+      mother_level = map_education_level(mother_cat),
+      own_years = education_level_to_years(own_level),
+      parent_level = parent_max_level(father_level, mother_level),
+      parent_years = education_level_to_years(parent_level)
+    )
+
+  as_harmonized_frame(
+    wave_year = 2016L,
+    country = d$country,
+    region = d$region_name,
+    age = d$age_pr,
+    gender = d$gender,
+    urban = d$urban_raw,
+    own_level = d$own_level,
+    parent_level = d$parent_level,
+    own_years = d$own_years,
+    parent_years = d$parent_years,
+    weight = d$weight_population,
+    father_level = d$father_level,
+    mother_level = d$mother_level,
+    father_years = education_level_to_years(d$father_level),
+    mother_years = education_level_to_years(d$mother_level),
+    hh_income_proxy = d$hh_income_raw,
+    migration_exposure = d$migration,
+    multigenerational_hh = d$multigen_proxy
+  )
+}
+
+read_lits_2022 <- function(raw_dir) {
+  path <- select_existing_file(c(
+    file.path(raw_dir, "lits_iv_dta", "lits_iv.dta"),
+    file.path(raw_dir, "lits_iv_dta", "lits_iv.csv")
+  ))
+  if (is.na(path)) {
+    return(tibble::tibble())
+  }
+
+  lits_iv_cols <- c(
+      "country", "region", "know_resp_code", "rand_resp_code",
+      paste0("q103", 1:9), paste0("q1031", 0:9), "q10320",
+      paste0("q105", 1:9), paste0("q1051", 0:9), "q10520",
+      "urbanity", "q109a", "q109b", "q110a", "q110b", "q111a", "q111b", "q225", "q505", "weight_pop", "weight"
+  )
+
+  if (grepl("\\.dta$", path)) {
+    d <- haven::read_dta(path, col_select = tidyselect::all_of(lits_iv_cols))
+  } else {
+    d <- readr::read_csv(path, show_col_types = FALSE) %>%
+      dplyr::select(tidyselect::any_of(lits_iv_cols))
+  }
+
+  d <- d %>%
+    dplyr::mutate(
+      country = as_label_text(country),
+      own_cat = dplyr::coalesce(as_label_text(q109b), as_label_text(q109a)),
+      father_cat = dplyr::coalesce(as_label_text(q110b), as_label_text(q110a)),
+      mother_cat = dplyr::coalesce(as_label_text(q111b), as_label_text(q111a)),
+      migration = yes_no_to_binary(as_label_text(q505)),
+      hh_income_raw = clean_numeric(q225),
+      urban_raw = as_label_text(urbanity),
+      weight_final = dplyr::coalesce(weight_pop, weight),
+      multigen_proxy = build_multigenerational_proxy(
+        .,
+        age_cols = c("q1051", "q1052", "q1053", "q1054", "q1055", "q1056", "q1057", "q1058", "q1059", "q10510", "q10511", "q10512", "q10513", "q10514", "q10515", "q10516", "q10517", "q10518", "q10519", "q10520")
+      )
+    )
+
+  roster_gender_cols <- lapply(paste0("q103", seq_len(20)), function(nm) as_label_text(d[[nm]]))
+  roster_age_cols <- lapply(paste0("q105", seq_len(20)), function(nm) clean_numeric(d[[nm]]))
+
+  d <- d %>%
+    dplyr::mutate(
+      primary_gender = extract_roster_value_by_code(rand_resp_code, roster_gender_cols),
+      knowledgeable_gender = extract_roster_value_by_code(know_resp_code, roster_gender_cols),
+      primary_age = extract_roster_value_by_code(rand_resp_code, roster_age_cols),
+      knowledgeable_age = extract_roster_value_by_code(know_resp_code, roster_age_cols),
+      respondent_gender = dplyr::coalesce(primary_gender, knowledgeable_gender),
+      respondent_age = dplyr::coalesce(primary_age, knowledgeable_age)
+    ) %>%
+    dplyr::filter(country == "Uzbekistan") %>%
+    dplyr::mutate(
+      own_level = map_education_level(own_cat),
+      father_level = map_education_level(father_cat),
+      mother_level = map_education_level(mother_cat),
+      own_years = education_level_to_years(own_level),
+      parent_level = parent_max_level(father_level, mother_level),
+      parent_years = education_level_to_years(parent_level)
+    )
+
+  as_harmonized_frame(
+    wave_year = 2022L,
+    country = d$country,
+    region = d$region,
+    age = d$respondent_age,
+    gender = d$respondent_gender,
+    urban = d$urban_raw,
+    own_level = d$own_level,
+    parent_level = d$parent_level,
+    own_years = d$own_years,
+    parent_years = d$parent_years,
+    weight = d$weight_final,
+    father_level = d$father_level,
+    mother_level = d$mother_level,
+    father_years = education_level_to_years(d$father_level),
+    mother_years = education_level_to_years(d$mother_level),
+    hh_income_proxy = d$hh_income_raw,
+    migration_exposure = d$migration,
+    multigenerational_hh = d$multigen_proxy
+  )
+}
+
+build_lits_harmonized <- function(raw_dir = file.path(PROJ_PATHS$raw_data, "lits")) {
+  ensure_project_dirs()
+
+  assert_required_lits_inputs(raw_dir)
+
+  wave_frames <- list(
+    `2010` = read_lits_2010(raw_dir),
+    `2016` = read_lits_2016(raw_dir),
+    `2022` = read_lits_2022(raw_dir)
+  )
+  unreadable_waves <- names(wave_frames)[vapply(wave_frames, nrow, integer(1)) == 0L]
+
+  if (length(unreadable_waves) > 0) {
+    stop(
+      paste0(
+        "LiTS raw files were found but could not be read into non-empty harmonized data for wave(s): ",
+        paste(unreadable_waves, collapse = ", "),
+        ". Check the file formats and source-variable names in data/raw/lits/."
+      ),
+      call. = FALSE
+    )
+  }
+
+  # Log per-wave row counts before merging
+  wave_ns <- vapply(wave_frames, nrow, integer(1))
+  for (wn in names(wave_ns)) {
+    message(sprintf("  Wave %s: %d rows after country filter and harmonization", wn, wave_ns[[wn]]))
+  }
+
+  all_waves <- dplyr::bind_rows(wave_frames)
+
+  # Post-merge validation: row count must equal sum of inputs
+  expected_n <- sum(wave_ns)
+  if (nrow(all_waves) != expected_n) {
+    warning(sprintf(
+      "Post-merge row count (%d) differs from expected sum of wave frames (%d).",
+      nrow(all_waves), expected_n
+    ))
+  }
+
+  required_cols <- c("wave_year", "age")
+  missing_cols <- setdiff(required_cols, names(all_waves))
+  if (length(missing_cols) > 0) {
+    stop(
+      paste0(
+        "The harmonized LiTS frame is missing required column(s): ",
+        paste(missing_cols, collapse = ", "),
+        ". The rebuild cannot continue."
+      ),
+      call. = FALSE
+    )
+  }
+
+  # Remove exact duplicate rows (if any) and log
+  n_before_dedup <- nrow(all_waves)
+  all_waves <- dplyr::distinct(all_waves)
+  n_dupes <- n_before_dedup - nrow(all_waves)
+  if (n_dupes > 0) {
+    message(sprintf("  Removed %d exact duplicate rows from harmonized frame.", n_dupes))
+  }
+
+  n_before_age <- nrow(all_waves)
+  all_waves <- all_waves %>%
+    dplyr::filter(age >= ANALYSIS_SAMPLE$age_min, age <= ANALYSIS_SAMPLE$age_max)
+  message(sprintf(
+    "  Age filter [%d-%d]: %d -> %d rows (%d dropped)",
+    ANALYSIS_SAMPLE$age_min, ANALYSIS_SAMPLE$age_max,
+    n_before_age, nrow(all_waves), n_before_age - nrow(all_waves)
+  ))
+
+  all_waves
+}
+
+write_lits_harmonized <- function(
+  df,
+  path = file.path(PROJ_PATHS$processed_data, "lits_harmonized.csv")
+) {
+  ensure_project_dirs()
+  readr::write_csv(df, path)
+  path
+}
+
+build_policy_panel <- function(
+  raw_dir = file.path(PROJ_PATHS$raw_data, "admin")
+) {
+  ensure_project_dirs()
+  files <- list.files(raw_dir, pattern = "region_year_policy_panel\\.(csv|xlsx|xls)$", full.names = TRUE)
+  if (length(files) == 0) {
+    message("No policy panel found. Returning an empty tibble.")
+    return(tibble::tibble())
+  }
+  panel <- read_any_table(files[1]) %>% janitor::clean_names()
+  panel
+}

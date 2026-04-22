@@ -1,0 +1,39 @@
+sample_family,wave_year,step,n
+adult_lits,2010,adult_age_eligible_sample,1125
+adult_lits,2010,own_category_observed,1125
+adult_lits,2010,own_years_observed,1125
+adult_lits,2010,father_observed,878
+adult_lits,2010,mother_observed,886
+adult_lits,2010,any_parent_observed,915
+adult_lits,2010,both_parents_observed,849
+adult_lits,2010,rank_model_included,913
+adult_lits,2010,category_model_included,913
+adult_lits,2010,module_b_included,913
+adult_lits,2016,adult_age_eligible_sample,1239
+adult_lits,2016,own_category_observed,1239
+adult_lits,2016,own_years_observed,1239
+adult_lits,2016,father_observed,1140
+adult_lits,2016,mother_observed,1168
+adult_lits,2016,any_parent_observed,1185
+adult_lits,2016,both_parents_observed,1123
+adult_lits,2016,rank_model_included,1185
+adult_lits,2016,category_model_included,1185
+adult_lits,2016,module_b_included,1185
+adult_lits,2022,adult_age_eligible_sample,791
+adult_lits,2022,own_category_observed,791
+adult_lits,2022,own_years_observed,791
+adult_lits,2022,father_observed,772
+adult_lits,2022,mother_observed,775
+adult_lits,2022,any_parent_observed,776
+adult_lits,2022,both_parents_observed,771
+adult_lits,2022,rank_model_included,776
+adult_lits,2022,category_model_included,776
+adult_lits,2022,module_b_included,776
+module_c_child,2022,Uzbekistan LiTS IV respondents,1006
+module_c_child,2022,Respondents with child module eligibility info,650
+module_c_child,2022,Respondents with child enrolled pre-COVID,186
+module_c_child,2022,Mechanism sample with non-missing parental schooling,183
+module_c_child,2022,Main online-switch model usable sample,183
+module_c_child,2022,Main closure-without-online model usable sample,183
+module_c_child,2022,Main stoppage model usable sample,183
+module_c_child,2022,Main remote-challenge model usable sample,173

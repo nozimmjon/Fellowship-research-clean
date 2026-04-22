@@ -1,0 +1,28 @@
+module,check_id,status,detail
+module_a,completeness_alignment_2010,ok,"Wave 2010: own category N=1125, own years N=1125; parent category N=915, parent years N=915."
+module_a,rank_vs_category_denominator_2010,ok,Wave 2010: rank-model N=913 versus category-model N=913.
+module_a,completeness_alignment_2016,ok,"Wave 2016: own category N=1239, own years N=1239; parent category N=1185, parent years N=1185."
+module_a,rank_vs_category_denominator_2016,ok,Wave 2016: rank-model N=1185 versus category-model N=1185.
+module_a,completeness_alignment_2022,ok,"Wave 2022: own category N=791, own years N=791; parent category N=776, parent years N=776."
+module_a,rank_vs_category_denominator_2022,ok,Wave 2022: rank-model N=776 versus category-model N=776.
+module_b,formula_inventory_eq2_persistence_trend_minimal,ok,"eq2_persistence_trend_minimal: own_rank ~ parent_rank + i(wave_year_fe, parent_rank, ref = ""2010"") | region + cohort + wave_year_fe"
+module_b,formula_inventory_eq3_attainment_score_minimal,ok,eq3_attainment_score_minimal: own_ed_score ~ parent_ed_score | region + cohort + wave_year_fe
+module_b,formula_inventory_eq4_upward_full_lpm_minimal,ok,"eq4_upward_full_lpm_minimal: upward_any ~ i(parent_ed_level, ref = ""upper_secondary"") | region + cohort + wave_year_fe"
+module_b,formula_inventory_eq4_upward_lowparent_lpm_minimal,ok,"eq4_upward_lowparent_lpm_minimal: upward_any ~ i(parent_ed_level, ref = ""upper_secondary"") | region + cohort + wave_year_fe"
+module_b,formula_inventory_eq5_persistence_heterogeneity_minimal,ok,eq5_persistence_heterogeneity_minimal: persist_same ~ parent_ed_score + urban + female + parent_ed_score:urban + parent_ed_score:female + parent_ed_score:wave2022 | region + cohort + wave_year_fe
+module_b,formula_inventory_eq2_persistence_trend_demographic,ok,"eq2_persistence_trend_demographic: own_rank ~ parent_rank + i(wave_year_fe, parent_rank, ref = ""2010"") + urban + female | region + cohort + wave_year_fe"
+module_b,formula_inventory_eq3_attainment_score_demographic,ok,eq3_attainment_score_demographic: own_ed_score ~ parent_ed_score + urban + female | region + cohort + wave_year_fe
+module_b,formula_inventory_eq4_upward_full_lpm_demographic,ok,"eq4_upward_full_lpm_demographic: upward_any ~ i(parent_ed_level, ref = ""upper_secondary"") + urban + female | region + cohort + wave_year_fe"
+module_b,formula_inventory_eq4_upward_lowparent_lpm_demographic,ok,"eq4_upward_lowparent_lpm_demographic: upward_any ~ i(parent_ed_level, ref = ""upper_secondary"") + urban + female | region + cohort + wave_year_fe"
+module_b,formula_inventory_eq5_persistence_heterogeneity_demographic,ok,eq5_persistence_heterogeneity_demographic: persist_same ~ parent_ed_score + urban + female + parent_ed_score:urban + parent_ed_score:female + parent_ed_score:wave2022 | region + cohort + wave_year_fe
+module_b,formula_inventory_eq2_persistence_trend_extended,ok,"eq2_persistence_trend_extended: own_rank ~ parent_rank + i(wave_year_fe, parent_rank, ref = ""2010"") + urban + female + multigenerational_hh | region + cohort + wave_year_fe"
+module_b,formula_inventory_eq3_attainment_score_extended,ok,eq3_attainment_score_extended: own_ed_score ~ parent_ed_score + urban + female + multigenerational_hh | region + cohort + wave_year_fe
+module_b,formula_inventory_eq4_upward_full_lpm_extended,ok,"eq4_upward_full_lpm_extended: upward_any ~ i(parent_ed_level, ref = ""upper_secondary"") + urban + female + multigenerational_hh | region + cohort + wave_year_fe"
+module_b,formula_inventory_eq4_upward_lowparent_lpm_extended,ok,"eq4_upward_lowparent_lpm_extended: upward_any ~ i(parent_ed_level, ref = ""upper_secondary"") + urban + female + multigenerational_hh | region + cohort + wave_year_fe"
+module_b,formula_inventory_eq5_persistence_heterogeneity_extended,ok,eq5_persistence_heterogeneity_extended: persist_same ~ parent_ed_score + urban + female + parent_ed_score:urban + parent_ed_score:female + parent_ed_score:wave2022 + multigenerational_hh | region + cohort + wave_year_fe
+module_b,eq2_parent_rank_precision,ok,"Eq. 2 parent_rank estimate=0.155, p-value=0.002."
+module_b,eq2_2016_to_2022_difference,caution,"Conditional 2016-to-2022 rank-slope difference estimate=-0.061, p-value=0.277."
+module_c,main_estimator_scale,caution,"Main Module C models are weighted region-fixed-effects logits, so coefficients are on the log-odds scale."
+module_c,stoppage_fragility,caution,Stoppage robustness: 0 of 3 parent_low_edu scenarios significant at 5%; extreme coefficient present=no.
+module_c,parent_proxy_exception,caution,"Module C uses mean parent years for the low/high split; under the max-parent median split, threshold=16.0, low-group N=183, high-group N=0."
+module_c,sample_flow_vs_model_n,ok,Module C parental-schooling sample N=183; main stoppage-model usable N=183.

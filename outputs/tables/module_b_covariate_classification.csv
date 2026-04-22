@@ -1,0 +1,6 @@
+covariate,control_class,rationale,n_total,n_non_missing,share_non_missing,n_unique_non_missing,included_in_extended,included_in_demographic
+urban,pre_determined,Residence type is treated as a background location characteristic rather than an outcome of the respondent's schooling in the current design.,2874,2741,0.953723034098817,2,FALSE,TRUE
+female,pre_determined,Sex is fixed before the respondent's schooling outcome and is used only for descriptive adjustment.,2874,2874,1,2,FALSE,TRUE
+hh_income_proxy,potentially_endogenous,"Current household income may partly reflect the respondent's own education and later-life selection, so it is not a clean pre-treatment control.",2874,1686,0.5866388308977035,279,FALSE,FALSE
+migration_exposure,potentially_endogenous,Migration-linked exposure can reflect household responses that co-evolve with schooling and later labor-market opportunities.,2874,1950,0.6784968684759917,2,FALSE,FALSE
+multigenerational_hh,potentially_endogenous,"Current multigenerational co-residence may be shaped by education, marriage, fertility, and post-school household adjustment.",2874,2874,1,2,TRUE,FALSE

@@ -1,0 +1,280 @@
+---
+title: "Uzbekistan Expanded Higher Education"
+subtitle: "Did Equality of Opportunity Follow?"
+author: "Nozimjon Ortiqov"
+institute: "Center for Economic Research and Reforms · CAP Fellow"
+date: today
+format:
+  revealjs:
+    slide-number: true
+    incremental: false
+    theme: white
+    transition: fade
+    footer: "Evidence from three waves of household survey data, 2010–2023"
+    css: styles/slides-custom.css
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+read_csv_safe <- function(path) {
+  if (!file.exists(path)) {
+    stop(sprintf("Required file is missing: %s", path))
+  }
+  utils::read.csv(path, stringsAsFactors = FALSE)
+}
+
+fmt_num <- function(x, digits = 3) {
+  sprintf(paste0("%.", digits, "f"), as.numeric(x))
+}
+
+fmt_pct <- function(x, digits = 1) {
+  sprintf(paste0("%.", digits, "f%%"), 100 * as.numeric(x))
+}
+
+fmt_p <- function(x) {
+  x <- as.numeric(x)
+  if (is.na(x)) return(NA_character_)
+  if (x < 0.001) return("<0.001")
+  sprintf("%.3f", x)
+}
+
+project_file <- function(...) file.path("..", ...)
+
+module_a_summary <- read_csv_safe(project_file("outputs", "tables", "module_a_summary_metrics.csv"))
+module_b_coef <- read_csv_safe(project_file("outputs", "tables", "module_b_model_coefficients.csv"))
+module_b_wave_profiles <- read_csv_safe(project_file("outputs", "tables", "module_b_persistence_wave_profiles.csv"))
+module_b_wave_tests <- read_csv_safe(project_file("outputs", "tables", "module_b_wave_difference_tests.csv"))
+module_c_sample <- read_csv_safe(project_file("outputs", "tables", "module_c_mechanism_sample.csv"))
+module_c_summary <- read_csv_safe(project_file("outputs", "tables", "module_c_mechanism_summary.csv"))
+hbs_context <- read_csv_safe(project_file("outputs", "tables", "hbs_household_support_context.csv"))
+rank_change_tests <- read_csv_safe(project_file("outputs", "tables", "empirical_rank_rank_change_tests.csv"))
+expansion_panel <- utils::read.csv(project_file("data", "processed", "uzbekistan_expansion_panel.csv"))
+
+metric_row <- function(metric, wave_year) {
+  out <- module_a_summary[
+    module_a_summary$subgroup_type == "overall" &
+      module_a_summary$subgroup_value == "all" &
+      module_a_summary$metric == metric &
+      module_a_summary$wave_year == wave_year,
+  ]
+  out[1, ]
+}
+
+metric_est <- function(metric, wave_year) as.numeric(metric_row(metric, wave_year)$estimate)
+metric_n <- function(metric, wave_year) as.integer(metric_row(metric, wave_year)$n)
+
+coef_est <- function(model, term) {
+  out <- module_b_coef[module_b_coef$model == model & module_b_coef$term == term, ]
+  as.numeric(out$estimate[1])
+}
+
+rank_change_value <- function(comparison, column = "estimate") {
+  rows <- rank_change_tests[rank_change_tests$comparison == comparison, ]
+  rows[[column]][1]
+}
+
+module_b_wave_test_value <- function(specification, comparison, column = "estimate") {
+  rows <- module_b_wave_tests[
+    module_b_wave_tests$specification == specification &
+      module_b_wave_tests$comparison == comparison,
+  ]
+  rows[[column]][1]
+}
+
+mech_est <- function(outcome, group = "overall", group_value = "all") {
+  out <- module_c_summary[
+    module_c_summary$outcome == outcome &
+      module_c_summary$group == group &
+      module_c_summary$group_value == group_value,
+  ]
+  as.numeric(out$estimate[1])
+}
+
+sample_n <- function(step_pattern) {
+  idx <- grep(step_pattern, module_c_sample$step)
+  as.integer(module_c_sample$n[idx[1]])
+}
+
+hbs_context_est <- function(metric) {
+  as.numeric(hbs_context$national[hbs_context$metric == metric][1])
+}
+```
+
+## Motivation
+
+- Since 2017, Uzbekistan has rapidly expanded higher education: enrollment nearly tripled, institutions roughly doubled.
+- The question is whether this expansion is weakening the link between family background and educational attainment.
+- No multi-wave mobility profile exists for Uzbekistan; this paper provides one using three LiTS waves (2010, 2016, 2022-23).
+
+**Focus:** the expansion is real — but did equality of opportunity follow?
+
+## Higher-Education Expansion Context {.smaller}
+
+```{r}
+#| fig-height: 1.5
+#| fig-width: 8
+nat_agg <- aggregate(
+  students_total_per_1000_youth_20_24 ~ academic_year_start_for_merge,
+  data = expansion_panel, FUN = mean
+)
+names(nat_agg) <- c("year", "students")
+nat_agg$year_label <- paste0(nat_agg$year, "/", substr(nat_agg$year + 1, 3, 4))
+
+ggplot2::ggplot(nat_agg, ggplot2::aes(x = factor(year_label, levels = year_label), y = students)) +
+  ggplot2::geom_col(fill = "#1b6ca8", width = 0.55, alpha = 0.85) +
+  ggplot2::geom_text(ggplot2::aes(label = round(students)), vjust = -0.3, size = 3.5, color = "grey30") +
+  ggplot2::labs(title = "Students per 1,000 youth (20-24), national average", x = NULL, y = NULL) +
+  ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0.12))) +
+  ggplot2::theme_minimal(base_size = 12) +
+  ggplot2::theme(panel.grid.major.x = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank(),
+                 plot.title = ggplot2::element_text(size = 11, face = "bold"))
+```
+
+- Institutions: 119 (2019/20) → 222 (2024/25). Students: ~441K → 1.4M+.
+- National average doubled (73 → 180 per 1,000 youth), yet no region has caught up with where Tashkent city started.
+- Remittances channeled to education: 26% (high-expansion) vs. 16% (low-expansion).
+
+## Research Questions {.smaller}
+
+- How persistent is educational attainment across generations in Uzbekistan?
+- Which household and regional factors are correlated with mobility?
+- What does LiTS IV suggest about household learning conditions during COVID?
+
+**Contribution:** a reproducible three-wave mobility profile — descriptive and associational, not causal. The evidence cannot yet tell us whether expansion is weakening persistence, but it establishes how strong family-background gradients are.
+
+## Data and Design
+
+- **Main data:** LiTS 2010, 2016, 2022-23 (repeated cross-sections, not a panel).
+- **Sample:** Adults 25-64, weighted. N = `r format(metric_n("rank_rank_slope", 2010) + metric_n("rank_rank_slope", 2016) + metric_n("rank_rank_slope", 2022), big.mark = ",")`.
+- **Note:** LiTS II/III sampled 10 oblasts; LiTS IV expanded to all 14.
+- **Measures:** Rank-rank slope (preferred), upward/downward mobility, persistence rates.
+- **Supplementary:** HBS 2021-2025 (household context only).
+
+## Family Background Still Predicts Who Gets Ahead {.smaller}
+
+:::: {.columns}
+::: {.column width="50%"}
+- Persistence score: `r fmt_num(metric_est("rank_rank_slope", 2010))` (2010), `r fmt_num(metric_est("rank_rank_slope", 2016))` (2016), `r fmt_num(metric_est("rank_rank_slope", 2022))` (2022-23).
+- 2010→2016: +`r fmt_num(rank_change_value("2010_to_2016"))` (p `r fmt_p(rank_change_value("2010_to_2016", "p.value"))`)
+- 2016→2022: `r fmt_num(rank_change_value("2016_to_2022"))` (p = `r fmt_p(rank_change_value("2016_to_2022", "p.value"))`)
+- Low 2010 may partly reflect measurement differences.
+
+**Decline after 2016 is not significant. Family background remains strongly linked to attainment.**
+:::
+::: {.column width="50%"}
+![](../outputs/figures/tier_a_rank_rank_by_wave.png){width=100%}
+:::
+::::
+
+## Pooled Correlates (Module B) {.smaller}
+
+- Parental education is the strongest predictor of attainment: `r fmt_num(coef_est("eq3_attainment_score_minimal", "parent_ed_score"))` across specifications.
+- Adding migration exposure and household structure barely moves the parental-education coefficient — the gradient is not explained by a small set of observable characteristics.
+- Conditional 2010→2016 slope increase stays positive in all three specs.
+- Conditional 2016→2022 difference is negative but imprecise.
+- Wild-cluster bootstrap confirms the pattern under few-cluster robustness.
+
+**The parental-education gradient is stable across specifications and is not driven by observable household characteristics.**
+
+## Where You Live and When You Were Born Still Matter {.smaller}
+
+- Urban residents show higher upward mobility than rural residents across all three waves.
+- Rural households report higher emigration and remittance receipt, yet the mobility gap persists — remittances alone do not remove structural place-based disadvantage.
+- Younger adults (25-34) show a different cross-wave trajectory from older cohorts, but in every age group and wave, family background still predicts attainment.
+- Regional variation is wide: in 2022-23, persistence scores ranged from near zero in some regions to above 0.4 in Tashkent city.
+
+**No cohort and no region in the data has escaped the family-background pattern.**
+
+## COVID-19 Exposed Unequal Learning Support {.smaller}
+
+- LiTS IV child module: ~`r sample_n("^Mechanism sample with non-missing parental schooling$")` households with school-age children (illustrative, not representative).
+- Education stopped during closures: `r fmt_pct(mech_est("education_stopped_covid"))`.
+- At least one remote-learning barrier: `r fmt_pct(mech_est("any_remote_challenge"))`.
+- Mother as primary learning support: `r fmt_pct(mech_est("support_mother"))`.
+- Less-educated families reported more internet and device problems.
+
+When schooling shifted into the household, students from lower-resource families were more exposed. Digital inclusion requires reliable connections, working devices, and recognition that not all households can substitute for schools equally.
+
+**When formal instruction is interrupted, existing inequalities are reinforced.**
+
+## Household Budgets Show Why Expansion Alone May Not Be Enough {.smaller}
+
+| Indicator | National |
+|-----------|----------|
+| Positive education spending | `r fmt_pct(hbs_context_est("education_spending_positive"))` |
+| Tutoring | `r fmt_pct(hbs_context_est("has_tutoring"))` |
+| Remittance household | `r fmt_pct(hbs_context_est("has_remittance_hh"))` |
+| Internet access | `r fmt_pct(hbs_context_est("internet_access_hh"))` |
+
+HBS 2021-2025 (supplementary context). Remittance-for-education is 10 pp higher in high-expansion regions. Expanded supply interacts with unequal household capacity — new seats widen access without equalizing who uses them.
+
+## Expansion-Region Comparison
+
+![](../outputs/hbs_descriptive/figures/hbs_high_low_expansion_plot.png){width=85%}
+
+Low-expansion regions have higher emigration/remittances (+5 pp). High-expansion regions channel more remittances toward education (+10 pp). Descriptive grouping only.
+
+## Comparative Context {.smaller}
+
+- Persistence levels fall in a moderate-to-high range for developing and middle-income settings.
+- Hertz et al. (2008): cross-country education correlations span roughly 0.20–0.60.
+- Mid-period strengthening is consistent with Turkey and other middle-income countries where expansion coexists with durable family-background gradients.
+- The 2010 LiTS wave recorded parental education differently (years vs. categories) and had higher missingness — the 2010 level carries more uncertainty.
+
+**Most attainment in 2022-23 was shaped before the post-2017 surge. The data establish how strong persistence is, but cannot yet tell us whether expansion is weakening it.**
+
+## Key Caveats {.smaller}
+
+- Repeated cross-sections, not a family panel — associations, not causal effects.
+- Most respondents completed education before the post-2017 expansion.
+- 2016→2022 difference is imprecise; only the 2010→2016 increase is statistically clear.
+- 2010 wave recorded parental education differently (years, not categories) with higher missingness.
+- Region-clustered SEs with 10-14 clusters; wild bootstrap reported alongside.
+- LiTS II/III covered only 10 of 14 oblasts — common-region sensitivity reported.
+- COVID child module covers ~180 households (illustrative, not representative).
+
+## Priority 1: Intervene Earlier
+
+- Three transitions: lower secondary, upper secondary, first year of tertiary.
+- Assessments + remediation at grades 9 and 11.
+- Transition guidance for rural and first-generation students.
+- Indicator: entrance-exam participation by region, school type, gender.
+
+## Priority 2: Judge Expansion by Completion
+
+- Outreach in secondary schools, need-based grants, dormitory/transport support.
+- Bridge programs and first-year advising for first-generation students.
+- First-year retention as a routine metric.
+
+**Success = disadvantaged students enter, remain, and complete.**
+
+## Priority 3: Build Equity Monitoring
+
+- Link admin records (enrollment, retention, completion) with survey indicators.
+- First step: annual rates by region and gender.
+- No regular mechanism exists for tracking equity over time.
+
+## Conclusion {.smaller}
+
+- Family background remains a strong predictor of educational attainment in Uzbekistan. Rapid expansion is occurring alongside a wide opportunity gap.
+- The parent-child gradient rose sharply by 2016; parental education remains the strongest pooled correlate.
+- Pandemic disruption was widespread; mothers carried most of the learning-support burden.
+- Most respondents completed education before the post-2017 expansion — the results establish how strong persistence is, but cannot yet tell us whether expansion is weakening it.
+- Expansion is necessary but not sufficient for equal opportunity.
+- **Future work:** panel data, administrative education records, quasi-experimental reform evaluation.
+
+## Backup / Appendix {.smaller}
+
+:::: {.columns}
+::: {.column width="55%"}
+- Upward mobility rates: `r fmt_pct(metric_est("upward_mobility_rate", 2010))`, `r fmt_pct(metric_est("upward_mobility_rate", 2016))`, `r fmt_pct(metric_est("upward_mobility_rate", 2022))`.
+- Downward mobility rates: `r fmt_pct(metric_est("downward_mobility_rate", 2010))`, `r fmt_pct(metric_est("downward_mobility_rate", 2016))`, `r fmt_pct(metric_est("downward_mobility_rate", 2022))`.
+- 2022 rank and category measures use the same harmonized denominator of `r metric_n("rank_rank_slope", 2022)`.
+:::
+::: {.column width="45%"}
+![](../outputs/figures/tier_a_directional_rates_by_wave.png){width=100%}
+:::
+::::

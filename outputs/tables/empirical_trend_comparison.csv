@@ -1,0 +1,13 @@
+evidence_family,specification,specification_label,wave_year,estimate,std.error,ci_low,ci_high,n_used
+module_a_raw_descriptive,descriptive,Raw descriptive slope,2010,0.13426206567717336,0.02965255548290135,0.07606680779389256,0.19245732356045414,913
+module_a_raw_descriptive,descriptive,Raw descriptive slope,2016,0.306630688646319,0.0268646728732513,0.25392297137723047,0.3593384059154075,1185
+module_a_raw_descriptive,descriptive,Raw descriptive slope,2022,0.25246377806001996,0.029241650402670294,0.19506143429750095,0.309866121822539,776
+module_b_conditional_association,demographic,Add standard demographics,2010,0.15488356791905727,0.04067466759494433,0.075162684349828,0.23460445148828657,2741
+module_b_conditional_association,demographic,Add standard demographics,2016,0.30935856963502184,0.025125501002948795,0.2601134925757172,0.3586036466943265,2741
+module_b_conditional_association,demographic,Add standard demographics,2022,0.2480430940976807,0.05208772764669243,0.1459530238736323,0.3501331643217291,2741
+module_b_conditional_association,extended,Add potentially endogenous household controls,2010,0.15474203467966982,0.04068927649143853,0.07499251819945803,0.23449155115988163,2741
+module_b_conditional_association,extended,Add potentially endogenous household controls,2016,0.3090656096432809,0.024878367011172128,0.26030490630721415,0.35782631297934764,2741
+module_b_conditional_association,extended,Add potentially endogenous household controls,2022,0.24848830678550687,0.05171785842179945,0.14712316692123845,0.3498534466497753,2741
+module_b_conditional_association,minimal,Minimal parental association + fixed effects,2010,0.14024046843365856,0.037620563832159296,0.0665055182445362,0.2139754186227809,2874
+module_b_conditional_association,minimal,Minimal parental association + fixed effects,2016,0.3092528067348305,0.025367037729884148,0.2595343263897889,0.35897128707987214,2874
+module_b_conditional_association,minimal,Minimal parental association + fixed effects,2022,0.2506401420744858,0.05110900303691028,0.15046833683639343,0.3508119473125782,2874

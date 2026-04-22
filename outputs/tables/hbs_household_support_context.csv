@@ -1,0 +1,8 @@
+metric,row_label,national,urban,rural,denominator,available_years
+has_enrolled_member,Households with enrolled members,0.6567554508748056,0.6346737333927908,0.6793893095789045,all households,"2021, 2022, 2023, 2024, 2025"
+education_spending_positive,Households with positive education spending,0.6256975077748202,0.6031364656402087,0.64882267638129,all households,"2021, 2022, 2023, 2024, 2025"
+has_tutoring,Households with tutoring,0.14160130779441008,0.142274161476531,0.14091162977538552,all households,"2021, 2022, 2023, 2024, 2025"
+has_emigrant_hh,Households with emigrant member,0.16264395955466604,0.1317614262069605,0.19429869369325403,all households,"2021, 2022, 2023, 2024, 2025"
+has_remittance_hh,Households receiving remittances,0.14816395487960682,0.11915087359989232,0.1779024923276313,all households,"2021, 2022, 2023, 2024, 2025"
+remittance_for_education,Remittance households using remittances for education,0.1957284912180928,0.20273145364228526,0.19092095299513664,remittance households,"2021, 2022, 2023, 2024, 2025"
+internet_access_hh,Households with internet access,0.7965691448305413,0.7955486247470958,0.7976093878210799,all households,"2021, 2022, 2023, 2024"

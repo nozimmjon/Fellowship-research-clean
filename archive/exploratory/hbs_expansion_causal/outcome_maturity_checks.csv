@@ -1,0 +1,10 @@
+age_window,outcome_name,linked_sample_n,non_missing_share,positive_rate,age_appropriate
+18_24,tertiary enrollment,8224,1,0.008268482490272374,TRUE
+18_24,tertiary completion,8224,1,0.048638132295719845,FALSE
+18_24,upward mobility proxy,8224,1,0.2932879377431907,FALSE
+22_30,tertiary enrollment,9393,1,0.009581603321622485,TRUE
+22_30,tertiary completion,9393,1,0.14287235175130417,TRUE
+22_30,upward mobility proxy,9393,1,0.46885978920472693,FALSE
+25_35,tertiary enrollment,10914,1,0.00540590067802822,FALSE
+25_35,tertiary completion,10914,1,0.15283122594832327,TRUE
+25_35,upward mobility proxy,10914,1,0.50448964632582,TRUE

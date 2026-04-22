@@ -1,0 +1,4 @@
+model,estimated,note,preferred_window,preferred_outcome,chosen_sample,sample_n
+Model A,True,Weighted descriptive cohort-exposure comparisons on the rescued residence-stability sample.,18_24,tertiary enrollment,no_migration_signal,4114
+Model B,False,"Not estimated in this run. Outcome-harmonization audit found no repeated multi-year candidate outcome in the no-migration working sample, so Model B remains deferred.",18_24,tertiary enrollment,no_migration_signal,4114
+Model C,False,Deferred until a repeated multi-year outcome supports Model B on the same restricted sample.,18_24,tertiary enrollment,no_migration_signal,4114

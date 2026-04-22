@@ -1,0 +1,573 @@
+# Module C: descriptive, non-causal child-module mechanism regressions.
+challenge_to_binary <- function(x) {
+  txt <- tolower(trimws(as_label_text(x)))
+  dplyr::case_when(
+    txt %in% c("a slight challenge", "a moderate challenge", "a major challenge") ~ 1L,
+    txt %in% c("not a challenge", "not applicable") ~ 0L,
+    TRUE ~ NA_integer_
+  )
+}
+
+text_match_binary <- function(x, pattern) {
+  txt <- tolower(trimws(as.character(x)))
+  out <- ifelse(is.na(txt) | txt == "", NA_integer_, as.integer(stringr::str_detect(txt, pattern)))
+  as.integer(out)
+}
+
+weighted_rate <- function(x, w) {
+  keep <- !is.na(x) & !is.na(w) & w > 0
+  if (!any(keep)) {
+    return(NA_real_)
+  }
+  stats::weighted.mean(as.numeric(x[keep]), w[keep])
+}
+
+# Relax the support rule for appendix-only child-module diagnostics relative to the main N >= 30 descriptive threshold.
+MODULE_C_MIN_GROUP_N <- 15L
+MODULE_C_MIN_EVENTS_PER_GROUP <- 2L
+
+apply_module_c_parent_proxy <- function(df, parent_proxy = c("mean_parent_years", "max_parent_level")) {
+  parent_proxy <- match.arg(parent_proxy)
+
+  if (nrow(df) == 0) {
+    return(df)
+  }
+
+  if (parent_proxy == "mean_parent_years") {
+    df$parent_years_schooling <- df$parent_years_schooling_mean
+  } else {
+    df$parent_years_schooling <- df$parent_years_schooling_max
+  }
+
+  df
+}
+
+prepare_module_c_mechanism_data <- function(raw_dir = file.path(PROJ_PATHS$raw_data, "lits")) {
+  path <- select_existing_file(c(
+    file.path(raw_dir, "lits_iv_dta", "lits_iv.dta"),
+    file.path(raw_dir, "lits_iv_dta", "lits_iv.csv")
+  ))
+  if (is.na(path)) {
+    return(tibble::tibble())
+  }
+
+  mod_c_cols <- c(
+    "country", "region", "urbanity",
+    "q110a", "q110b", "q111a", "q111b",
+    "q713", "q714", "q715a", "q715b", "q715c", "q716", "q717", "q718a", "q718b", "q718c", "q718d", "q718e",
+    "weight_pop", "weight"
+  )
+
+  if (grepl("\\.dta$", path)) {
+    d <- haven::read_dta(path, col_select = tidyselect::all_of(mod_c_cols))
+  } else {
+    d <- readr::read_csv(path, show_col_types = FALSE) %>%
+      dplyr::select(tidyselect::any_of(mod_c_cols))
+  }
+
+  d <- d %>%
+    dplyr::mutate(
+      country = as_label_text(country),
+      region = harmonize_uzbekistan_region(as_label_text(region))
+    ) %>%
+    dplyr::filter(grepl("Uzbekistan", country, ignore.case = TRUE)) %>%
+    dplyr::mutate(
+      father_level = map_education_level(dplyr::coalesce(as_label_text(q110b), as_label_text(q110a))),
+      mother_level = map_education_level(dplyr::coalesce(as_label_text(q111b), as_label_text(q111a))),
+      father_years = education_level_to_years(father_level),
+      mother_years = education_level_to_years(mother_level),
+      parent_ed_level_max = parent_max_level(father_level, mother_level),
+      parent_years_schooling_mean = rowMeans(cbind(father_years, mother_years), na.rm = TRUE),
+      parent_years_schooling_mean = dplyr::if_else(is.nan(parent_years_schooling_mean), NA_real_, parent_years_schooling_mean),
+      parent_years_schooling_max = education_level_to_years(parent_ed_level_max),
+      parent_years_schooling = parent_years_schooling_mean,
+      urban = coerce_urban_binary(as_label_text(urbanity)),
+      weight_final = clean_numeric(dplyr::coalesce(weight_pop, weight)),
+      child_enrolled_pre_covid = yes_no_to_binary(as_label_text(q713)),
+      in_mechanism_sample = child_enrolled_pre_covid == 1L,
+      education_stopped_covid = yes_no_to_binary(as_label_text(q714)),
+      switched_online = yes_no_to_binary(as_label_text(q715a)),
+      school_closed_no_online = yes_no_to_binary(as_label_text(q715b)),
+      switched_hybrid = yes_no_to_binary(as_label_text(q715c)),
+      support_text = tolower(as_label_text(q716)),
+      support_mother = text_match_binary(support_text, "mother"),
+      support_father = text_match_binary(support_text, "father"),
+      support_grand_relatives = text_match_binary(support_text, "grand|relative"),
+      no_support_needed = text_match_binary(support_text, "no additional support was needed"),
+      no_support_available = text_match_binary(support_text, "no-one could provide additional support"),
+      device_text = tolower(as_label_text(q717)),
+      shared_device = text_match_binary(device_text, "shared with other members"),
+      dedicated_device = text_match_binary(device_text, "only used by this child|provided by the school"),
+      challenge_internet = challenge_to_binary(q718a),
+      challenge_device = challenge_to_binary(q718b),
+      challenge_cost = challenge_to_binary(q718c),
+      challenge_tech = challenge_to_binary(q718d),
+      challenge_balance = challenge_to_binary(q718e),
+      any_remote_challenge = dplyr::if_else(
+        rowSums(!is.na(cbind(challenge_internet, challenge_device, challenge_cost, challenge_tech, challenge_balance))) > 0,
+        as.integer(rowSums(cbind(challenge_internet, challenge_device, challenge_cost, challenge_tech, challenge_balance), na.rm = TRUE) > 0),
+        NA_integer_
+      )
+    ) %>%
+    dplyr::mutate(
+      region = factor(region),
+      urban = as.integer(urban)
+    )
+
+  d
+}
+
+build_module_c_coverage <- function(df, vars) {
+  if (nrow(df) == 0) {
+    return(tibble::tibble())
+  }
+
+  purrr::map_dfr(vars, function(v) {
+    x <- df[[v]]
+    n_non_missing <- sum(!is.na(x))
+    tibble::tibble(
+      variable = v,
+      n_total = nrow(df),
+      n_non_missing = n_non_missing,
+      share_non_missing = n_non_missing / nrow(df),
+      n_unique_non_missing = dplyr::n_distinct(x, na.rm = TRUE)
+    )
+  })
+}
+
+build_module_c_summary <- function(df) {
+  outcome_map <- c(
+    education_stopped_covid = "Stopped education due to COVID",
+    switched_online = "Switched to online learning",
+    school_closed_no_online = "School closed without online learning",
+    switched_hybrid = "Switched to hybrid learning",
+    support_mother = "Learning support from mother",
+    support_father = "Learning support from father",
+    support_grand_relatives = "Learning support from grandparents/relatives",
+    no_support_needed = "No additional support needed",
+    shared_device = "Child used shared device",
+    any_remote_challenge = "Any remote-learning challenge",
+    challenge_internet = "Internet challenge",
+    challenge_device = "Device challenge",
+    challenge_cost = "Cost challenge",
+    challenge_tech = "Technology-learning challenge",
+    challenge_balance = "Work/home-school balance challenge"
+  )
+
+  if (nrow(df) == 0) {
+    return(tibble::tibble())
+  }
+
+  long <- df %>%
+    dplyr::select(weight_final, parent_low_edu, dplyr::all_of(names(outcome_map))) %>%
+    tidyr::pivot_longer(cols = dplyr::all_of(names(outcome_map)), names_to = "outcome", values_to = "value")
+
+  overall <- long %>%
+    dplyr::group_by(outcome) %>%
+    dplyr::summarise(
+      estimate = weighted_rate(value, weight_final),
+      n_non_missing = sum(!is.na(value)),
+      .groups = "drop"
+    ) %>%
+    dplyr::mutate(group = "overall", group_value = "all")
+
+  by_parent <- long %>%
+    dplyr::filter(!is.na(parent_low_edu)) %>%
+    dplyr::group_by(outcome, parent_low_edu) %>%
+    dplyr::summarise(
+      estimate = weighted_rate(value, weight_final),
+      n_non_missing = sum(!is.na(value)),
+      .groups = "drop"
+    ) %>%
+    dplyr::mutate(
+      group = "parent_education",
+      group_value = dplyr::if_else(parent_low_edu == 1L, "lower_or_equal_median_parent_edu", "above_median_parent_edu")
+    ) %>%
+    dplyr::select(-parent_low_edu)
+
+  dplyr::bind_rows(overall, by_parent) %>%
+    dplyr::mutate(
+      outcome_label = unname(outcome_map[outcome]),
+      .after = outcome
+    ) %>%
+    dplyr::select(outcome, outcome_label, group, group_value, estimate, n_non_missing)
+}
+
+apply_parent_education_split <- function(df, split_rule = "median") {
+  if (nrow(df) == 0) {
+    return(df %>% dplyr::mutate(parent_low_edu = NA_integer_, split_rule = split_rule, split_threshold = NA_real_))
+  }
+
+  split_threshold <- dplyr::case_when(
+    split_rule == "median" ~ stats::median(df$parent_years_schooling, na.rm = TRUE),
+    split_rule == "leq_11" ~ 11,   # 11 years = upper secondary completion in Uzbekistan
+    split_rule == "leq_9" ~ 9,    # 9 years = lower secondary (basic general) completion
+    TRUE ~ NA_real_
+  )
+
+  if (is.na(split_threshold)) {
+    stop("Unknown split_rule: ", split_rule)
+  }
+
+  df %>%
+    dplyr::mutate(
+      parent_low_edu = dplyr::case_when(
+        is.na(parent_years_schooling) ~ NA_integer_,
+        parent_years_schooling <= split_threshold ~ 1L,
+        TRUE ~ 0L
+      ),
+      split_rule = split_rule,
+      split_threshold = split_threshold
+    )
+}
+
+assess_module_c_model_support <- function(
+    df,
+    outcome_var,
+    use_weights = TRUE,
+    min_group_n = MODULE_C_MIN_GROUP_N,
+    min_events_per_group = MODULE_C_MIN_EVENTS_PER_GROUP
+) {
+  model_df <- df %>%
+    dplyr::filter(
+      !is.na(.data[[outcome_var]]),
+      !is.na(parent_low_edu),
+      !is.na(urban),
+      !is.na(region)
+    )
+
+  if (use_weights) {
+    model_df <- model_df %>%
+      dplyr::filter(!is.na(weight_final), weight_final > 0)
+  }
+
+  if (nrow(model_df) == 0) {
+    return(list(
+      estimable = FALSE,
+      reason = "no_complete_rows",
+      n_used = 0L
+    ))
+  }
+
+  if (dplyr::n_distinct(model_df[[outcome_var]]) < 2) {
+    return(list(
+      estimable = FALSE,
+      reason = "no_outcome_variation",
+      n_used = nrow(model_df)
+    ))
+  }
+
+  support <- model_df %>%
+    dplyr::group_by(parent_low_edu) %>%
+    dplyr::summarise(
+      n = dplyr::n(),
+      n_events = sum(.data[[outcome_var]] == 1, na.rm = TRUE),
+      n_nonevents = sum(.data[[outcome_var]] == 0, na.rm = TRUE),
+      .groups = "drop"
+    )
+
+  low <- support[support$parent_low_edu == 1, ]
+  high <- support[support$parent_low_edu == 0, ]
+
+  low_n <- if (nrow(low) == 0) 0L else as.integer(low$n[1])
+  high_n <- if (nrow(high) == 0) 0L else as.integer(high$n[1])
+  low_events <- if (nrow(low) == 0) 0L else as.integer(low$n_events[1])
+  high_events <- if (nrow(high) == 0) 0L else as.integer(high$n_events[1])
+  low_nonevents <- if (nrow(low) == 0) 0L else as.integer(low$n_nonevents[1])
+  high_nonevents <- if (nrow(high) == 0) 0L else as.integer(high$n_nonevents[1])
+
+  reasons <- character()
+  if (low_n < min_group_n || high_n < min_group_n) {
+    reasons <- c(reasons, paste0("group_n_below_", min_group_n))
+  }
+  if (
+    low_events < min_events_per_group ||
+      low_nonevents < min_events_per_group ||
+      high_events < min_events_per_group ||
+      high_nonevents < min_events_per_group
+  ) {
+    reasons <- c(reasons, paste0("event_support_below_", min_events_per_group))
+  }
+
+  list(
+    estimable = length(reasons) == 0,
+    reason = if (length(reasons) == 0) NA_character_ else paste(unique(reasons), collapse = ";"),
+    n_used = nrow(model_df),
+    low_n = low_n,
+    high_n = high_n,
+    low_events = low_events,
+    low_nonevents = low_nonevents,
+    high_events = high_events,
+    high_nonevents = high_nonevents
+  )
+}
+
+fit_module_c_outcome_model <- function(df, outcome_var, use_weights = TRUE) {
+  model_df <- df %>%
+    dplyr::filter(
+      !is.na(.data[[outcome_var]]),
+      !is.na(parent_low_edu),
+      !is.na(urban),
+      !is.na(region)
+    )
+
+  if (use_weights) {
+    model_df <- model_df %>%
+      dplyr::filter(!is.na(weight_final), weight_final > 0)
+  }
+
+  # Require >= 80 obs and outcome variation; below this the logit is unreliable in small child-module splits
+  if (nrow(model_df) < 80 || dplyr::n_distinct(model_df[[outcome_var]]) < 2) {
+    return(NULL)
+  }
+
+  fml <- stats::as.formula(
+    paste0(outcome_var, " ~ parent_low_edu + urban + parent_low_edu:urban | region")
+  )
+  # Keep the appendix logit diagnostics parsimonious in the sparse child-module sample.
+
+  fit <- if (use_weights) {
+    fixest::feglm(
+      fml = fml,
+      family = "logit",
+      data = model_df,
+      vcov = ~region,
+      weights = ~weight_final
+    )
+  } else {
+    fixest::feglm(
+      fml = fml,
+      family = "logit",
+      data = model_df,
+      vcov = ~region
+    )
+  }
+
+  list(
+    model = fit,
+    formula = deparse(fml, width.cutoff = 500),
+    n_used = nrow(model_df),
+    use_weights = use_weights
+  )
+}
+
+fit_module_c_mechanisms <- function(raw_dir = file.path(PROJ_PATHS$raw_data, "lits")) {
+  prepared <- prepare_module_c_mechanism_data(raw_dir)
+  if (nrow(prepared) == 0) {
+    message("LiTS IV data not available for Module C mechanisms. Returning empty output.")
+    return(list(
+      prepared_data = tibble::tibble(),
+      base_sample_data = tibble::tibble(),
+      analysis_data = tibble::tibble(),
+      summary = tibble::tibble(),
+      coverage = tibble::tibble(),
+      sample_overview = tibble::tibble(),
+      models = list(),
+      formulae = tibble::tibble()
+    ))
+  }
+
+  mech_df_base <- prepared %>%
+    dplyr::filter(in_mechanism_sample) %>%
+    apply_module_c_parent_proxy("mean_parent_years")
+  mech_df <- apply_parent_education_split(mech_df_base, split_rule = "median")
+  median_parent_years <- unique(mech_df$split_threshold)[1]
+
+  sample_overview <- tibble::tibble(
+    step = c(
+      "Uzbekistan LiTS IV respondents",
+      "Respondents with child module eligibility info (q713 non-missing)",
+      "Respondents with child enrolled pre-COVID (q713 = yes)",
+      "Mechanism sample with non-missing parental schooling",
+      "Baseline parental-schooling median threshold (mean parent years)",
+      "Baseline low-parent-education group size (mean parent years)",
+      "Baseline higher-parent-education group size (mean parent years)"
+    ),
+    n = c(
+      nrow(prepared),
+      sum(!is.na(prepared$child_enrolled_pre_covid)),
+      sum(prepared$in_mechanism_sample, na.rm = TRUE),
+      sum(mech_df$in_mechanism_sample & !is.na(mech_df$parent_years_schooling), na.rm = TRUE),
+      median_parent_years,
+      sum(mech_df$parent_low_edu == 1, na.rm = TRUE),
+      sum(mech_df$parent_low_edu == 0, na.rm = TRUE)
+    )
+  )
+
+  summary_tbl <- build_module_c_summary(mech_df)
+
+  coverage_vars <- c(
+    "parent_years_schooling", "parent_low_edu", "urban", "weight_final",
+    "education_stopped_covid", "switched_online", "school_closed_no_online", "switched_hybrid",
+    "support_mother", "support_father", "support_grand_relatives", "no_support_needed",
+    "shared_device", "any_remote_challenge", "challenge_internet", "challenge_device",
+    "challenge_cost", "challenge_tech", "challenge_balance"
+  )
+  coverage_tbl <- build_module_c_coverage(mech_df, coverage_vars)
+
+  model_specs <- tibble::tibble(
+    model_name = c(
+      "m1_switched_online",
+      "m2_school_closed_no_online",
+      "m3_education_stopped_covid",
+      "m4_any_remote_challenge"
+    ),
+    outcome = c(
+      "switched_online",
+      "school_closed_no_online",
+      "education_stopped_covid",
+      "any_remote_challenge"
+    )
+  )
+
+  models <- list()
+  formula_rows <- list()
+  for (i in seq_len(nrow(model_specs))) {
+    model_name <- model_specs$model_name[[i]]
+    outcome <- model_specs$outcome[[i]]
+    support <- assess_module_c_model_support(mech_df, outcome, use_weights = TRUE)
+    if (!isTRUE(support$estimable)) {
+      next
+    }
+    fit_obj <- fit_module_c_outcome_model(mech_df, outcome, use_weights = TRUE)
+    if (is.null(fit_obj)) {
+      next
+    }
+    models[[model_name]] <- fit_obj$model
+    formula_rows[[length(formula_rows) + 1]] <- tibble::tibble(
+      model = model_name,
+      outcome = outcome,
+      formula = fit_obj$formula,
+      n_used = fit_obj$n_used
+    )
+  }
+
+  scenario_specs <- tibble::tribble(
+    ~scenario_id, ~split_rule, ~use_weights, ~parent_proxy,
+    "baseline_weighted_median", "median", TRUE, "mean_parent_years",
+    "unweighted_median", "median", FALSE, "mean_parent_years",
+    "weighted_leq11", "leq_11", TRUE, "mean_parent_years",
+    "weighted_leq9", "leq_9", TRUE, "mean_parent_years",
+    "weighted_median_maxparent", "median", TRUE, "max_parent_level"
+  )
+
+  scenario_rows <- list()
+  robust_rows <- list()
+  row_id <- 0L
+  for (s in seq_len(nrow(scenario_specs))) {
+    sid <- scenario_specs$scenario_id[[s]]
+    split_rule <- scenario_specs$split_rule[[s]]
+    use_w <- scenario_specs$use_weights[[s]]
+    parent_proxy <- scenario_specs$parent_proxy[[s]]
+    df_s <- mech_df_base %>%
+      apply_module_c_parent_proxy(parent_proxy) %>%
+      apply_parent_education_split(split_rule = split_rule)
+    split_threshold <- unique(df_s$split_threshold)[1]
+    n_low_group <- sum(df_s$parent_low_edu == 1, na.rm = TRUE)
+    n_high_group <- sum(df_s$parent_low_edu == 0, na.rm = TRUE)
+    scenario_supported <- n_low_group >= MODULE_C_MIN_GROUP_N && n_high_group >= MODULE_C_MIN_GROUP_N
+
+    scenario_rows[[length(scenario_rows) + 1]] <- tibble::tibble(
+      scenario_id = sid,
+      parent_proxy = parent_proxy,
+      split_rule = split_rule,
+      split_threshold = split_threshold,
+      use_weights = use_w,
+      n_total = nrow(df_s),
+      n_parent_non_missing = sum(!is.na(df_s$parent_years_schooling)),
+      n_low_group = n_low_group,
+      n_high_group = n_high_group,
+      support_min_group_n = MODULE_C_MIN_GROUP_N,
+      scenario_status = dplyr::if_else(
+        scenario_supported,
+        "supported",
+        "degenerate_low_group_support"
+      )
+    )
+
+    for (i in seq_len(nrow(model_specs))) {
+      model_name <- model_specs$model_name[[i]]
+      outcome <- model_specs$outcome[[i]]
+      support <- assess_module_c_model_support(df_s, outcome, use_weights = use_w)
+
+      if (!isTRUE(support$estimable)) {
+        row_id <- row_id + 1L
+        robust_rows[[row_id]] <- tibble::tibble(
+          scenario_id = sid,
+          parent_proxy = parent_proxy,
+          split_rule = split_rule,
+          split_threshold = split_threshold,
+          use_weights = use_w,
+          model = model_name,
+          outcome = outcome,
+          term = NA_character_,
+          estimate = NA_real_,
+          std.error = NA_real_,
+          statistic = NA_real_,
+          p.value = NA_real_,
+          n_used = as.integer(support$n_used),
+          status = "degenerate_support",
+          support_reason = support$reason
+        )
+        next
+      }
+
+      fit_obj <- fit_module_c_outcome_model(df_s, outcome, use_weights = use_w)
+
+      if (is.null(fit_obj)) {
+        row_id <- row_id + 1L
+        robust_rows[[row_id]] <- tibble::tibble(
+          scenario_id = sid,
+          parent_proxy = parent_proxy,
+          split_rule = split_rule,
+          split_threshold = split_threshold,
+          use_weights = use_w,
+          model = model_name,
+          outcome = outcome,
+          term = NA_character_,
+          estimate = NA_real_,
+          std.error = NA_real_,
+          statistic = NA_real_,
+          p.value = NA_real_,
+          n_used = NA_integer_,
+          status = "not_estimable",
+          support_reason = NA_character_
+        )
+      } else {
+        tid <- broom::tidy(fit_obj$model) %>%
+          dplyr::mutate(
+            scenario_id = sid,
+            parent_proxy = parent_proxy,
+            split_rule = split_rule,
+            split_threshold = split_threshold,
+            use_weights = use_w,
+            model = model_name,
+            outcome = outcome,
+            n_used = fit_obj$n_used,
+            status = "estimated",
+            support_reason = NA_character_,
+            .before = 1
+          )
+        row_id <- row_id + 1L
+        robust_rows[[row_id]] <- tid
+      }
+    }
+  }
+
+  robust_scenarios <- if (length(scenario_rows) == 0) tibble::tibble() else dplyr::bind_rows(scenario_rows)
+  robust_coefs <- if (length(robust_rows) == 0) tibble::tibble() else dplyr::bind_rows(robust_rows)
+  formulae_tbl <- if (length(formula_rows) == 0) tibble::tibble() else dplyr::bind_rows(formula_rows)
+
+  list(
+    prepared_data = prepared,
+    base_sample_data = mech_df_base,
+    analysis_data = mech_df,
+    summary = summary_tbl,
+    coverage = coverage_tbl,
+    sample_overview = sample_overview,
+    models = models,
+    formulae = formulae_tbl,
+    robustness_scenarios = robust_scenarios,
+    robustness_coefficients = robust_coefs
+  )
+}

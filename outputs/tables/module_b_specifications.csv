@@ -1,0 +1,4 @@
+specification,specification_label,control_terms
+minimal,Minimal parental association + fixed effects,
+demographic,Add standard demographics,urban + female
+extended,Add potentially endogenous household controls,urban + female + multigenerational_hh

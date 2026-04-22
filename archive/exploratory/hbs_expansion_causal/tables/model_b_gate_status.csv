@@ -1,0 +1,6 @@
+check_name,metric_summary,pass
+Direction sensible,Exposed-cohort top vs bottom quartile gap = 1.0%; top-half vs bottom-half gap = 0.8%; full-overlap top vs bottom gap = 1.7%,True
+No single-region dominance,Leading positive-contribution region = Bukhara region at 25.7%; gap after excluding Tashkent city = 0.9%,True
+Cell balance,Median cell n = 48.5; share >=10 = 95.2%; share >=20 = 88.1%,True
+Year stability,Outcome non-missing share min = 100.0%; year-to-year rate range = 0.0%; years covered = 1,False
+Sample interpretability,Age gap vs full linked = 0.15; female-share gap = 2.7%; max region-share gap = 0.8%,True
